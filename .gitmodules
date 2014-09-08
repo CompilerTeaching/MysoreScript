@@ -1,0 +1,3 @@
+[submodule "Pegmatite"]
+	path = Pegmatite
+	url = https://github.com/CompilerTeaching/Pegmatite.git
