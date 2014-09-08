@@ -70,7 +70,9 @@ if (LLVM_VER VERSION_GREATER 3.4)
 	target_link_libraries(mysorescript ${LLVM_SYSTEMLIBS})
 endif()
 set(CMAKE_EXE_LINKER_FLAGS "${LLVM_LDFLAGS} ${LIBGC} ${CMAKE_EXE_LINKER_FLAGS}")
-
+# Make sure that LLVM is able to find functions in the main executable
+SET_TARGET_PROPERTIES(mysorescript PROPERTIES
+       ENABLE_EXPORTS TRUE)
 
 
 option(BUILD_DOCUMENTATION "Use Doxygen to create the HTML based API documentation" OFF)
