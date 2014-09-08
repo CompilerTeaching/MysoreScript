@@ -1,4 +1,3 @@
-#define DEBUG_PARSING 1
 #include "Pegmatite/pegmatite.hh"
 namespace Parser
 {
