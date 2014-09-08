@@ -1,5 +1,5 @@
 #include "grammar.hh"
-#include "AST.hh"
+#include "ast.hh"
 
 namespace Parser
 {
