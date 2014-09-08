@@ -303,7 +303,7 @@ void Value::set(Obj o)
 	}
 	else if (!needsGC(object) && needsGC(o))
 	{
-		GC_remove_roots(&object, &object + 1);
+		GC_add_roots(&object, &object + 1);
 	}
 	object = o;
 }
