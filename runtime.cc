@@ -1,5 +1,6 @@
 #include "runtime.hh"
 #include <stdio.h>
+#include <string.h>
 #include <unordered_map>
 #include <vector>
 #include <gc.h>
