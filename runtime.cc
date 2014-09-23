@@ -1,4 +1,6 @@
 #include "runtime.hh"
+#include <fcntl.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <unordered_map>
@@ -36,6 +38,96 @@ Obj invalidMethod(Obj obj, Selector sel)
 }
 
 /**
+ * The structure representing MysoreScript `File` objects.
+ */
+struct File
+{
+	/** The class pointer. */
+	Class    *isa;
+	/** The file descriptor to use. */
+	intptr_t  fd;
+};
+
+/**
+ * The `open` method on `File` objects.  Files can only be opened in one mode
+ * by MysoreScript (read/write, create if doesn't exist).
+ */
+File *FileOpen(File *f, Selector sel, String *file)
+{
+	if (f->fd > 0)
+	{
+		close(f->fd);
+	}
+	// The file name must be a string
+	if (file == nullptr || isInteger((Obj)file) || file->isa != &StringClass)
+	{
+		return nullptr;
+	}
+	std::string filename(file->characters, getInteger(file->length));
+	f->fd = open(filename.c_str(), O_RDWR | O_CREAT, 0600);
+	return f;
+}
+/**
+ * The `close` method on `File` objects.  Note that files are not automatically
+ * closed: we could use the finaliser support in the Boehm GC to do this.
+ */
+Obj FileClose(File *f, Selector sel)
+{
+	if (f->fd > 0)
+	{
+		close(f->fd);
+		f->fd = 0;
+	}
+	return (Obj)f;
+}
+
+/**
+ * The `readline` method on `File` objects.  Constructs a `String` containing
+ * the line.
+ */
+String *FileReadLine(File *f, Selector sel)
+{
+	int fd = f->fd ? f->fd : STDIN_FILENO;
+	std::string buffer;
+	char c;
+	// This is very inefficient
+	while (1 == read(fd, &c, 1))
+	{
+		if (c == '\n')
+		{
+			break;
+		}
+		buffer.push_back(c);
+	}
+	uintptr_t len = buffer.size();
+	if (len == 0)
+	{
+		return nullptr;
+	}
+	String *newStr = gcAlloc<String>(len);
+	newStr->isa = &StringClass;
+	newStr->length = createSmallInteger(len);
+	memcpy(newStr->characters, buffer.c_str(), len);
+	return newStr;
+}
+
+/**
+ * The `write` method on `File` objects.
+ */
+Obj FileWrite(File *f, Selector sel, String *data)
+{
+	// The data must be a string
+	if (data == nullptr || isInteger((Obj)data) || data->isa != &StringClass)
+	{
+		return nullptr;
+	}
+	int fd = f->fd ? f->fd : STDOUT_FILENO;
+	// FIXME: Handle interrupted system calls correctly!
+	write(fd, data->characters, getInteger(data->length));
+	return (Obj)f;
+}
+
+/**
  * The `.length()` method for `String` objects.
  */
 Obj StringLength(String *str, Selector sel)
@@ -70,6 +162,10 @@ Obj StringCharAt(String *str, Selector sel, Obj idx)
  */
 Obj ArrayLength(Array *arr, Selector sel)
 {
+	if (arr->length == 0)
+	{
+		arr->length = createSmallInteger(0);
+	}
 	return arr->length;
 }
 /**
@@ -210,6 +306,10 @@ enum StaticSelectors
 	mul,
 	div,
 	compare,
+	open,
+	close,
+	readline,
+	write,
 	LAST_STATIC_SELECTOR
 };
 
@@ -228,11 +328,45 @@ const char *StaticSelectorNames[] =
 	"sub",
 	"mul",
 	"div",
-	"compare"
+	"compare",
+	"open",
+	"close",
+	"readline",
+	"write"
 };
 static_assert(sizeof(StaticSelectorNames) / sizeof(char*) ==
 		LAST_STATIC_SELECTOR-1, "Static selector names and enum out of sync");
 
+/**
+ * Methods for the file class.
+ */
+struct Method FileMethods[] =
+{
+	{
+		open,
+		0,
+		(CompiledMethod)FileOpen,
+		nullptr
+	},
+	{
+		close,
+		0,
+		(CompiledMethod)FileClose,
+		nullptr
+	},
+	{
+		readline,
+		0,
+		(CompiledMethod)FileReadLine,
+		nullptr
+	},
+	{
+		write,
+		0,
+		(CompiledMethod)FileWrite,
+		nullptr
+	}
+};
 /**
  * Method table for the `String` class.
  */
@@ -313,6 +447,10 @@ const char *StringIvars[] = { "length" };
  * The names of the instance variables in the `Array` class.
  */
 const char *ArrayIvars[] = { "length", "bufferSize", "buffer" };
+/**
+ * The names of the instance variables in the `File` class.
+ */
+const char *FileIvars[] = { "fd" };
 
 }
 
@@ -329,6 +467,18 @@ struct Class StringClass =
 	sizeof(StringIvars) / sizeof(char*),
 	StringMethods,
 	StringIvars
+};
+/**
+ * The `File` class structure.
+ */
+struct Class FileClass =
+{
+	NULL,
+	"File",
+	sizeof(FileMethods) / sizeof(Method),
+	sizeof(FileIvars) / sizeof(char*),
+	FileMethods,
+	FileIvars
 };
 /**
  * The `Array` class structure.
@@ -403,22 +553,24 @@ Selector lookupSelector(const std::string &str)
  */
 static std::unordered_map<std::string, struct Class*> classTable;
 
-void registerClass(const std::string &name, struct Class *cls)
+static void registerClasses()
 {
 	if (classTable.empty())
 	{
 		classTable["String"] = &StringClass;
 		classTable["Array"] = &ArrayClass;
+		classTable["File"] = &FileClass;
 	}
+}
+
+void registerClass(const std::string &name, struct Class *cls)
+{
+	registerClasses();
 	classTable[name] = cls;
 }
 struct Class* lookupClass(const std::string &name)
 {
-	if (classTable.empty())
-	{
-		classTable["String"] = &StringClass;
-		classTable["Array"] = &ArrayClass;
-	}
+	registerClasses();
 	return classTable[name];
 }
 Obj newObject(struct Class *cls)
