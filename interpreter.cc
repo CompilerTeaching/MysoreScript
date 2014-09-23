@@ -288,11 +288,19 @@ void Value::set(Obj o)
 {
 	if (needsGC(object) && !needsGC(o))
 	{
-		GC_remove_roots(&object, &object + 1);
+		assert(holder != nullptr);
+		GC_free(holder);
+		holder = nullptr;
 	}
 	else if (!needsGC(object) && needsGC(o))
 	{
-		GC_add_roots(&object, &object + 1);
+		assert(holder == nullptr);
+		holder = (Obj*)GC_malloc_uncollectable(sizeof(Obj));
+		*holder = o;
+	}
+	else if (needsGC(object) && needsGC(o))
+	{
+		*holder = o;
 	}
 	object = o;
 }
@@ -300,7 +308,8 @@ Value::~Value()
 {
 	if (needsGC(object))
 	{
-		GC_remove_roots(&object, &object + 1);
+		assert(holder != nullptr);
+		GC_free(holder);
 	}
 }
 Obj *Context::lookupSymbol(const std::string &name)

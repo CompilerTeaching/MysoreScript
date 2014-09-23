@@ -19,6 +19,12 @@ namespace Interpreter
 	class Value
 	{
 		/**
+		 * The Boehm GC places a relatively small limit on the number of root
+		 * sets that it supports.  To avoid hitting this limit, we allocate an
+		 * uncollectable buffer to hold this object.
+		 */
+		Obj *holder = nullptr;
+		/**
 		 * The object that this wraps.
 		 */
 		Obj object;
