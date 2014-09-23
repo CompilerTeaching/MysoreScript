@@ -413,7 +413,7 @@ Value *Call::compileExpression(Compiler::Context &c)
 {
 	SmallVector<Value*, 10> args;
 	// Compile the expression that evaluates to the object being called.
-	Value *obj = callee->compileExpression(c);
+	Value *obj = getAsObject(c, callee->compileExpression(c));
 	assert(obj);
 	// For both closure and method invocations, the object being invoked is the
 	// first argument
