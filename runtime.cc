@@ -151,7 +151,7 @@ Obj StringAdd(String *str, Selector sel, String *other)
 {
 	// If we are trying to concatenate something that's not a string, return
 	// null
-	if (isInteger((Obj)other) || other->isa != &StringClass)
+	if (other == nullptr || isInteger((Obj)other) || other->isa != &StringClass)
 	{
 		return nullptr;
 	}
@@ -172,7 +172,7 @@ Obj StringAdd(String *str, Selector sel, String *other)
 Obj StringCmp(String *str, Selector sel, String *other)
 {
 	// If we are trying to compare something that's not a string, return null
-	if (isInteger((Obj)other) || other->isa != &StringClass)
+	if (other == nullptr || isInteger((Obj)other) || other->isa != &StringClass)
 	{
 		return nullptr;
 	}
