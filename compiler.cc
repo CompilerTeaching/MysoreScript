@@ -528,7 +528,6 @@ void IfStatement::compile(Compiler::Context &c)
 }
 void WhileLoop::compile(Compiler::Context &c)
 {
-	Value *cond = condition->compileExpression(c);
 	// Create three blocks, one for the body of the test (which we will
 	// unconditionally branch back to at the end of the body), one for the loop
 	// body (which we will skip if the condition is false) and one for the end,
@@ -539,6 +538,9 @@ void WhileLoop::compile(Compiler::Context &c)
 	// Unconditionally branch to the block for the condition and compile it
 	c.B.CreateBr(condBlock);
 	c.B.SetInsertPoint(condBlock);
+	// Compile the condition expression
+	Value *cond = condition->compileExpression(c);
+	// Convert it to an integer and test that it isn't null
 	cond = getAsSmallInt(c, cond);
 	cond = c.B.CreateLShr(cond, ConstantInt::get(c.ObjIntTy, 3));
 	cond = c.B.CreateIsNotNull(cond);
