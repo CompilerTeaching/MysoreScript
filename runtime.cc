@@ -145,6 +145,56 @@ Obj StringDump(String *str, Selector sel)
 }
 
 /**
+ * The + method on a string, allocates a new string with the specified length.
+ */
+Obj StringAdd(String *str, Selector sel, String *other)
+{
+	// If we are trying to concatenate something that's not a string, return
+	// null
+	if (isInteger((Obj)other) || other->isa != &StringClass)
+	{
+		return nullptr;
+	}
+	uintptr_t len1 = getInteger(str->length);
+	uintptr_t len2 = getInteger(other->length);
+	uintptr_t lenTotal = len1+len2;
+	String *newStr = gcAlloc<String>(lenTotal);
+	newStr->isa = &StringClass;
+	newStr->length = createSmallInteger(lenTotal);
+	memcpy(newStr->characters, str->characters, len1);
+	memcpy(newStr->characters+len1, other->characters, len2);
+	return (Obj)newStr;
+}
+
+/**
+ * Compare two strings, returning an integer representing the ordering.
+ */
+Obj StringCmp(String *str, Selector sel, String *other)
+{
+	// If we are trying to compare something that's not a string, return null
+	if (isInteger((Obj)other) || other->isa != &StringClass)
+	{
+		return nullptr;
+	}
+	uintptr_t len1 = getInteger(str->length);
+	uintptr_t len2 = getInteger(other->length);
+	uintptr_t len = std::min(len1, len2);
+	int result = memcmp(str->characters, other->characters, len);
+	if (result == 0)
+	{
+		if (len1 > len2)
+		{
+			result = str->characters[len2];
+		}
+		else if (len1 < len2)
+		{
+			result = 0 - other->characters[len1];
+		}
+	}
+	return createSmallInteger(result);
+}
+
+/**
  * Selectors for methods that are defined as part of the runtime.
  */
 enum StaticSelectors
@@ -159,6 +209,7 @@ enum StaticSelectors
 	sub,
 	mul,
 	div,
+	compare,
 	LAST_STATIC_SELECTOR
 };
 
@@ -176,7 +227,8 @@ const char *StaticSelectorNames[] =
 	"add",
 	"sub",
 	"mul",
-	"div"
+	"div",
+	"compare"
 };
 static_assert(sizeof(StaticSelectorNames) / sizeof(char*) ==
 		LAST_STATIC_SELECTOR-1, "Static selector names and enum out of sync");
@@ -202,6 +254,18 @@ struct Method StringMethods[] =
 		dump,
 		0,
 		(CompiledMethod)StringDump,
+		nullptr
+	},
+	{
+		add,
+		1,
+		(CompiledMethod)StringAdd,
+		nullptr
+	},
+	{
+		compare,
+		1,
+		(CompiledMethod)StringCmp,
 		nullptr
 	}
 };
@@ -360,7 +424,7 @@ struct Class* lookupClass(const std::string &name)
 Obj newObject(struct Class *cls)
 {
 	// Allocate space for the object
-	Obj obj = (Obj)GC_MALLOC(sizeof(Obj)*(cls->indexedIVarCount + 1));
+	Obj obj = gcAlloc<struct Object>(sizeof(Obj)*cls->indexedIVarCount);
 	// Set its class pointer
 	obj->isa = cls;
 	return obj;

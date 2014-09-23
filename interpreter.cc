@@ -1,22 +1,10 @@
 #include <string.h>
 #include "parser.hh"
-#include "gc.h"
 
 using namespace AST;
 using namespace MysoreScript;
 
 namespace {
-/**
- * Typesafe helper function for allocating garbage-collected memory.  Allocates
- * enough memory for one instance of the specified type, plus the number of
- * extra bytes requested.
- */
-template<typename T>
-T* gcAlloc(size_t extraBytes=0)
-{
-	size_t size = sizeof(T) + extraBytes;
-	return (T*)GC_MALLOC(size);
-}
 /**
  * Indicates whether a particular object needs to be visible to the GC.  If
  * it's a real pointer, then it does, otherwise (if it's an integer hidden in

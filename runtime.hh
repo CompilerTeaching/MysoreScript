@@ -3,10 +3,24 @@
 #include <stdint.h>
 #include <assert.h>
 #include <string>
+#include "gc.h"
 
 static_assert(sizeof(void*) == 8,
 	"MysoreScript only supports 64-bit platforms currently");
 
+namespace {
+/**
+ * Typesafe helper function for allocating garbage-collected memory.  Allocates
+ * enough memory for one instance of the specified type, plus the number of
+ * extra bytes requested.
+ */
+template<typename T>
+T* gcAlloc(size_t extraBytes=0)
+{
+	size_t size = sizeof(T) + extraBytes;
+	return (T*)GC_MALLOC(size);
+}
+}
 namespace AST
 {
 	struct ClosureDecl;
