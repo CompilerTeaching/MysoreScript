@@ -578,7 +578,7 @@ Obj ClosureDecl::interpretClosure(Interpreter::Context &c, Closure *self,
 	// If we now have a compiled version, call it
 	if (compiledClosure)
 	{
-		callCompiledClosure(compiledClosure, self, args,
+		return callCompiledClosure(compiledClosure, self, args,
 				parameters->arguments.objects().size());
 	}
 	// Create a new symbol table for this closure
