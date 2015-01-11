@@ -158,7 +158,7 @@ int main(int argc, char **argv)
 			break;
 		}
 		// Parse the line
-		pegmatite::StringInput input(buffer);
+		pegmatite::StringInput input(std::move(buffer));
 		std::unique_ptr<AST::Statements> ast = 0;
 		pegmatite::ErrorList el;
 		c1 = clock();
