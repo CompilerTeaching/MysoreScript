@@ -76,6 +76,11 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 	int c;
+	pegmatite::ErrorReporter err =
+		[](const pegmatite::InputRange &r, std::string s) {
+			std::cerr << "Syntax error: \n line " << r.start.line
+			          << ", column " << r.start.col;
+	};
 	// Parse the options that we understand
 	while ((c = getopt(argc, argv, "hmitf:")) != -1)
 	{
@@ -116,18 +121,10 @@ int main(int argc, char **argv)
 		c1 = clock();
 		// Open the file
 		pegmatite::AsciiFileInput input(open(file, O_RDONLY));
-		pegmatite::ErrorList el;
 		c1 = clock();
 		// Parse one or more statements, report errors if there are any
-		if (!p.parse(input, p.g.statements, p.g.ignored, el, ast))
+		if (!p.parse(input, p.g.statements, p.g.ignored, err, ast))
 		{
-			std::cerr << "errors: \n";
-			for (auto &err : el)
-			{
-				std::cerr << "line " << err.start.line
-						  << ", col " << err.finish.col <<  ": ";
-				std::cerr << "syntax error" << std::endl;
-			}
 			return EXIT_FAILURE;
 		}
 		logTimeSince(c1, "Parsing program");
@@ -160,17 +157,9 @@ int main(int argc, char **argv)
 		// Parse the line
 		pegmatite::StringInput input(std::move(buffer));
 		std::unique_ptr<AST::Statements> ast = 0;
-		pegmatite::ErrorList el;
 		c1 = clock();
-		if (!p.parse(input, p.g.statements, p.g.ignored, el, ast))
+		if (!p.parse(input, p.g.statements, p.g.ignored, err, ast))
 		{
-			std::cerr << "errors: \n";
-			for (auto &err : el)
-			{
-				std::cerr << "line " << err.start.line
-						  << ", col " << err.finish.col <<  ": ";
-				std::cerr << "syntax error" << std::endl;
-			}
 			continue;
 		}
 		logTimeSince(c1, "Parsing program");
