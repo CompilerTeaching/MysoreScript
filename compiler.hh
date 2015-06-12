@@ -30,7 +30,7 @@ namespace Compiler
 		/**
 		 * The current module.  Each function is compiled in a separate module.
 		 */
-		llvm::Module       &M;
+		std::unique_ptr<llvm::Module>      M;
 		/**
 		 * The function being compiled.
 		 */

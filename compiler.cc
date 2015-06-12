@@ -71,7 +71,7 @@ Value *getAsSmallInt(Compiler::Context &c, Value *i)
 Compiler::Context::Context(Interpreter::SymbolTable &g) :
 	globalSymbols(g),
 	C(getGlobalContext()),
-	M(*new Module("MysoreScript", C)),
+	M(new Module("MysoreScript", C)),
 	B(C),
 	ObjPtrTy(Type::getInt8PtrTy(C)),
 	ObjIntTy(Type::getInt64Ty(C)),
@@ -80,7 +80,7 @@ Compiler::Context::Context(Interpreter::SymbolTable &g) :
 	// These functions do nothing, they just ensure that the correct modules
 	// are not removed by the linker.
 	LLVMInitializeNativeTarget();
-	LLVMLinkInJIT();
+	LLVMLinkInMCJIT();
 }
 
 Value *Compiler::Context::lookupSymbolAddr(const std::string &str)
@@ -104,7 +104,7 @@ Value *Compiler::Context::lookupSymbolAddr(const std::string &str)
 ClosureInvoke Compiler::Context::compile()
 {
 	// Construct a couple of pass managers to run the optimisations.
-	FunctionPassManager FPM(&M);
+	llvm::legacy::FunctionPassManager FPM(M.get());
 	PassManager MPM;
 	PassManagerBuilder Builder;
 	Builder.OptLevel = 2;
@@ -113,18 +113,18 @@ ClosureInvoke Compiler::Context::compile()
 
 	// If you want to see the LLVM IR before optimisation, uncomment the
 	// following line:
-	//M.dump();
+	//M->dump();
 
 	// Run the passes to optimise the function / module.
 	FPM.run(*F);
-	MPM.run(M);
+	MPM.run(*M);
 
 	// If you want to see the LLVM IR before optimisation, uncomment the
 	// following line:
-	//M.dump();
+	//M->dump();
 
 	std::string err;
-	EngineBuilder EB(&M);
+	EngineBuilder EB(std::move(M));
 	// Construct an execution engine (JIT)
 	ExecutionEngine *EE = EB.setEngineKind(EngineKind::JIT)
 		.setErrorStr(&err)
@@ -204,7 +204,7 @@ CompiledMethod ClosureDecl::compileMethod(Class *cls,
 			params.size());
 	// Create the LLVM function
 	c.F = Function::Create(ClosureInvokeTy, GlobalValue::ExternalLinkage,
-			"invoke", &c.M);
+			"invoke", c.M.get());
 	// Insert the first basic block and store all of the parameters.
 	BasicBlock *entry = BasicBlock::Create(c.C, "entry", c.F);
 	c.B.SetInsertPoint(entry);
@@ -299,7 +299,7 @@ ClosureInvoke ClosureDecl::compileClosure(Interpreter::SymbolTable &globalSymbol
 	FunctionType *ClosureInvokeTy = c.getClosureType(boundVars.size(),
 			params.size());
 	// Create the LLVM function
-	c.F = Function::Create(ClosureInvokeTy, GlobalValue::ExternalLinkage, "invoke", &c.M);
+	c.F = Function::Create(ClosureInvokeTy, GlobalValue::ExternalLinkage, "invoke", c.M.get());
 	// Insert the first basic block and store all of the parameters.
 	BasicBlock *entry = BasicBlock::Create(c.C, "entry", c.F);
 	c.B.SetInsertPoint(entry);
@@ -368,7 +368,7 @@ Value *ClosureDecl::compileExpression(Compiler::Context &c)
 	size_t closureSize = sizeof(struct Closure) + boundVars.size() * sizeof(Obj);
 	// Insert the `GC_malloc` function (provided by libgc) into the module,
 	// bitcast to return a pointer to our closure type.
-	Constant *allocFn = c.M.getOrInsertFunction("GC_malloc", closurePtrTy,
+	Constant *allocFn = c.M->getOrInsertFunction("GC_malloc", closurePtrTy,
 			c.ObjIntTy, nullptr);
 	// Allocate GC'd memory for the closure.  Note that it would often be more
 	// efficient to do this on the stack, but only if we can either statically
@@ -455,7 +455,7 @@ Value *Call::compileExpression(Compiler::Context &c)
 	// call it.
 	FunctionType *methodType = c.getMethodType(0, args.size() - 2);
 	// Get the lookup function
-	Constant *lookupFn = c.M.getOrInsertFunction("compiledMethodForSelector",
+	Constant *lookupFn = c.M->getOrInsertFunction("compiledMethodForSelector",
 			methodType->getPointerTo(), obj->getType(), c.SelTy, nullptr);
 	// Insert the call to the function that performs the lookup.  This will
 	// always return *something* that we can call, even if it's just a function
@@ -603,7 +603,7 @@ Value *NewExpr::compileExpression(Compiler::Context &c)
 	// Create a value corresponding to the class pointer
 	Value *clsPtr = staticAddress(c, cls, c.ObjPtrTy);
 	// Look up the function that creates instances of objects
-	Constant *newFn = c.M.getOrInsertFunction("newObject", c.ObjPtrTy,
+	Constant *newFn = c.M->getOrInsertFunction("newObject", c.ObjPtrTy,
 			c.ObjPtrTy, nullptr);
 	// Call the function with the class pointer as the argument
 	return c.B.CreateCall(newFn, clsPtr, "new");
@@ -708,7 +708,7 @@ Value *compileBinaryOp(Compiler::Context &c, Value *LHS, Value *RHS,
 	// Next we'll handle the real object case.
 	c.B.SetInsertPoint(obj);
 	// Call the function that handles the object case
-	Value *objResult = c.B.CreateCall2(c.M.getOrInsertFunction(slowCallFnName,
+	Value *objResult = c.B.CreateCall2(c.M->getOrInsertFunction(slowCallFnName,
 				c.ObjPtrTy, LHS->getType(), RHS->getType(), nullptr), LHS,
 			RHS);
 	// And branch to the continuation block
