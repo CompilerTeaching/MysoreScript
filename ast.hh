@@ -151,7 +151,7 @@ namespace AST
 		 * Literals do not define or use any values.
 		 */
 		void collectVarUses(std::unordered_set<std::string> &decls,
-		                    std::unordered_set<std::string> &uses)
+		                    std::unordered_set<std::string> &uses) override
 		{
 			return;
 		}
@@ -184,7 +184,7 @@ namespace AST
 		 * Literals do not define or use any values.
 		 */
 		void collectVarUses(std::unordered_set<std::string> &decls,
-		                    std::unordered_set<std::string> &uses)
+		                    std::unordered_set<std::string> &uses) override
 		{
 			return;
 		}
@@ -241,7 +241,7 @@ namespace AST
 		 * Compile the expression by compiling the two sides and then calling
 		 * `compileBinOp` (implemented in subclasses) to compile the operation.
 		 */
-		virtual llvm::Value *compileExpression(Compiler::Context &c)
+		llvm::Value *compileExpression(Compiler::Context &c) override
 		{
 			return compileBinOp(c,
 			                    lhs->compileExpression(c),
@@ -263,7 +263,7 @@ namespace AST
 		 * reference variables.
 		 */
 		void collectVarUses(std::unordered_set<std::string> &decls,
-		                    std::unordered_set<std::string> &uses)
+		                    std::unordered_set<std::string> &uses) override
 		{
 			lhs->collectVarUses(decls, uses);
 			rhs->collectVarUses(decls, uses);
@@ -374,7 +374,7 @@ namespace AST
 		/**
 		 * All comparisons are (obviously) comparisons.
 		 */
-		virtual bool isComparison() { return true; }
+		virtual bool isComparison() override { return true; }
 		/**
 		 * Comparisons don't map to any method name.
 		 */
@@ -594,7 +594,7 @@ namespace AST
 		 * bound variables as uses.
 		 */
 		void collectVarUses(std::unordered_set<std::string> &decls,
-		                    std::unordered_set<std::string> &uses);
+		                    std::unordered_set<std::string> &uses) override;
 	};
 	/**
 	 * Reference to a variable.
@@ -609,7 +609,7 @@ namespace AST
 		 * Add this variable to the set of referenced variables.
 		 */
 		void collectVarUses(std::unordered_set<std::string> &decls,
-		                    std::unordered_set<std::string> &uses)
+		                    std::unordered_set<std::string> &uses) override
 		{
 			uses.insert(name->name);
 		}
@@ -652,7 +652,7 @@ namespace AST
 		 * Collect any variables use in this expression.
 		 */
 		void collectVarUses(std::unordered_set<std::string> &decls,
-		                    std::unordered_set<std::string> &uses)
+		                    std::unordered_set<std::string> &uses) override
 		{
 			target->collectVarUses(decls, uses);
 			expr->collectVarUses(decls, uses);
@@ -701,7 +701,7 @@ namespace AST
 		 * Collect the variables referenced by this call.
 		 */
 		void collectVarUses(std::unordered_set<std::string> &decls,
-		                    std::unordered_set<std::string> &uses)
+		                    std::unordered_set<std::string> &uses) override
 		{
 			callee->collectVarUses(decls, uses);
 			for (auto &arg : arguments->arguments)
@@ -735,7 +735,7 @@ namespace AST
 		 * Adds this variable to the set that are defined.
 		 */
 		void collectVarUses(std::unordered_set<std::string> &decls,
-		                    std::unordered_set<std::string> &uses)
+		                    std::unordered_set<std::string> &uses) override
 		{
 			decls.insert(name->name);
 		}
@@ -762,7 +762,7 @@ namespace AST
 		 * Collect any variables that are referenced.
 		 */
 		void collectVarUses(std::unordered_set<std::string> &decls,
-		                    std::unordered_set<std::string> &uses)
+		                    std::unordered_set<std::string> &uses) override
 		{
 			expr->collectVarUses(decls, uses);
 		}
@@ -794,7 +794,7 @@ namespace AST
 		 * Collect all of the variables used and defined in this statement.
 		 */
 		void collectVarUses(std::unordered_set<std::string> &decls,
-		                    std::unordered_set<std::string> &uses)
+		                    std::unordered_set<std::string> &uses) override
 		{
 			condition->collectVarUses(decls, uses);
 			body->collectVarUses(decls, uses);
@@ -823,7 +823,7 @@ namespace AST
 		 * Collect the variables used and declared in the loop.
 		 */
 		void collectVarUses(std::unordered_set<std::string> &decls,
-		                    std::unordered_set<std::string> &uses)
+		                    std::unordered_set<std::string> &uses) override
 		{
 			condition->collectVarUses(decls, uses);
 			body->collectVarUses(decls, uses);
@@ -871,7 +871,7 @@ namespace AST
 		 * never a need to collect their declarations.
 		 */
 		void collectVarUses(std::unordered_set<std::string> &decls,
-		                    std::unordered_set<std::string> &uses) {}
+		                    std::unordered_set<std::string> &uses) override {}
 	};
 	/**
 	 * A `new` expression, which constructs a new instance of a class.
@@ -885,7 +885,7 @@ namespace AST
 		/**
 		 * Construct a new instance of the class in the interpreter.
 		 */
-		Obj evaluateExpr(Interpreter::Context &c);
+		Obj evaluateExpr(Interpreter::Context &c) override;
 		/**
 		 * Construct a call to the function that constructs a new instance.
 		 */
@@ -896,6 +896,6 @@ namespace AST
 		 * not the symbol table managed by the interpreter context..
 		 */
 		void collectVarUses(std::unordered_set<std::string> &decls,
-		                    std::unordered_set<std::string> &uses) {}
+		                    std::unordered_set<std::string> &uses) override {}
 	};
 }
