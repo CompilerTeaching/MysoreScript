@@ -266,15 +266,23 @@ CompiledMethod ClosureDecl::compileMethod(Class *cls,
 	// Next we need to add the instance variables to the symbol table.
 	if (cls->indexedIVarCount)
 	{
+		// The type of the object pointer argument
+		PointerType *ArgTy = cast<PointerType>(ClosureInvokeTy->params()[0]);
+		// The type of the object 
+		StructType *ObjTy = cast<StructType>(ArgTy);
 		// This does pointer arithmetic on the first argument to get the address
 		// of the array of instance variables.
-		Value *iVarsArray = c.B.CreateStructGEP(c.F->arg_begin(), 1);
+		Value *iVarsArray = c.B.CreateStructGEP(ObjTy, c.F->arg_begin(), 1);
+		// The type of the instance variables array
+		Type *iVarsArrayTy = ObjTy->elements()[0];
+		// The type of the arguments array
 		for (int i=0 ; i<cls->indexedIVarCount ; i++)
 		{
 			const char *name = cls->indexedIVarNames[i];
 			// Now we do similar arithmetic on the array to get the address of
 			// each instance variable.
-			c.symbols[name] = c.B.CreateStructGEP(iVarsArray, i++, name);
+			c.symbols[name] =
+				c.B.CreateStructGEP(iVarsArrayTy, iVarsArray, i++, name);
 		}
 	}
 	// Compile the statements in the method.
@@ -338,11 +346,18 @@ ClosureInvoke ClosureDecl::compileClosure(Interpreter::SymbolTable &globalSymbol
 	// same way that we added instance variables for methods.
 	if (!boundVars.empty())
 	{
-		Value *boundVarsArray = c.B.CreateStructGEP(c.F->arg_begin(), 4);
+		// The type of the closure pointer argument
+		PointerType *ArgTy = cast<PointerType>(ClosureInvokeTy->params()[0]);
+		// The type of the closure object
+		StructType *ObjTy = cast<StructType>(ArgTy);
+		// The type of the instance variables array
+		Type *boundVarsArrayTy = ObjTy->elements()[3];
+
+		Value *boundVarsArray = c.B.CreateStructGEP(ObjTy, c.F->arg_begin(), 4);
 		int i=0;
 		for (auto &bound : boundVars)
 		{
-			c.symbols[bound] = c.B.CreateStructGEP(boundVarsArray, i++, bound);
+			c.symbols[bound] = c.B.CreateStructGEP(boundVarsArrayTy, boundVarsArray, i++, bound);
 		}
 	}
 	body->compile(c);
@@ -361,7 +376,9 @@ Value *ClosureDecl::compileExpression(Compiler::Context &c)
 	// Get the type of the invoke function
 	FunctionType *invokeTy = c.getClosureType(boundVars.size(), params.size());
 	// Get the type of the first parameter (a pointer to the closure structure)
-	Type *closurePtrTy = invokeTy->getParamType(0);
+	PointerType *closurePtrTy = cast<PointerType>(invokeTy->getParamType(0));
+	// The type of the closure.
+	StructType *closureTy = cast<StructType>(closurePtrTy->getElementType());
 	// The size of the closure is the size of `Closure`, which contains all of
 	// the fields shared by all closures, and then space for all of the bound
 	// variables.
@@ -378,10 +395,10 @@ Value *ClosureDecl::compileExpression(Compiler::Context &c)
 				closureSize));
 	// Set the isa pointer to the closure class.
 	c.B.CreateStore(staticAddress(c, &ClosureClass, c.ObjPtrTy),
-			c.B.CreateStructGEP(closure, 0));
+			c.B.CreateStructGEP(closureTy, closure, 0));
 	// Set the parameters pointer to the number of parameters.
 	c.B.CreateStore(compileSmallInt(c, params.size()),
-			c.B.CreateStructGEP(closure, 1));
+			c.B.CreateStructGEP(closureTy, closure, 1));
 	// If we've already compiled the function for this closure, then insert a
 	// pointer to it into the closure, otherwise use the trampoline that calls
 	// back into the interpreter.
@@ -391,19 +408,20 @@ Value *ClosureDecl::compileExpression(Compiler::Context &c)
 	ClosureInvoke closureFn = compiledClosure ? compiledClosure :
 		Interpreter::closureTrampolines[params.size()];
 	c.B.CreateStore(staticAddress(c, closureFn, c.ObjPtrTy),
-		c.B.CreateStructGEP(closure, 2));
+		c.B.CreateStructGEP(closureTy, closure, 2));
 	// Set the AST pointer
 	c.B.CreateStore(staticAddress(c, this, c.ObjPtrTy),
-		c.B.CreateStructGEP(closure, 3));
+		c.B.CreateStructGEP(closureTy, closure, 3));
 	// Get a pointer to the array of bound variables
-	Value *boundVarsArray = c.B.CreateStructGEP(closure, 4);
+	Value *boundVarsArray = c.B.CreateStructGEP(closureTy, closure, 4);
+	Type *boundVarsArrayTy = closureTy->elements()[3];
 	int i=0;
 	for (auto &var : boundVars)
 	{
 		// Load each bound variable and then insert it into the closure at the
 		// correct index.
 		c.B.CreateStore(c.B.CreateLoad(c.lookupSymbolAddr(var)),
-			c.B.CreateStructGEP(boundVarsArray, i++, var));
+			c.B.CreateStructGEP(boundVarsArrayTy, boundVarsArray, i++, var));
 	}
 	// Add this closure to our symbol table.
 	c.symbols[name->name] = closure;
@@ -441,11 +459,12 @@ Value *Call::compileExpression(Compiler::Context &c)
 		Type *Fields[3] =
 			{ c.ObjPtrTy, c.ObjPtrTy, invokeFnTy->getPointerTo() };
 		// Get the type of a pointer to the closure object 
-		Type *closurePtrTy = StructType::create(Fields)->getPointerTo();
+		Type *closureTy = StructType::create(Fields);
+		Type *closurePtrTy = closureTy->getPointerTo();
 		// Cast the called object to a closure
 		Value *closure = c.B.CreateBitCast(obj, closurePtrTy);
 		// Compute the address of the pointer to the closure invoke function
-		Value *invokeFn = c.B.CreateStructGEP(closure, 2);
+		Value *invokeFn = c.B.CreateStructGEP(closureTy, closure, 2);
 		// Load the address of the invoke function
 		invokeFn = c.B.CreateLoad(invokeFn);
 		// Insert the call
@@ -460,7 +479,7 @@ Value *Call::compileExpression(Compiler::Context &c)
 	// Insert the call to the function that performs the lookup.  This will
 	// always return *something* that we can call, even if it's just a function
 	// that reports an error.
-	Value *methodFn = c.B.CreateCall2(lookupFn, obj, args[1]);
+	Value *methodFn = c.B.CreateCall(lookupFn, {obj, args[1]});
 	// Call the method
 	return c.B.CreateCall(methodFn, args, "call_method");
 }
@@ -708,9 +727,9 @@ Value *compileBinaryOp(Compiler::Context &c, Value *LHS, Value *RHS,
 	// Next we'll handle the real object case.
 	c.B.SetInsertPoint(obj);
 	// Call the function that handles the object case
-	Value *objResult = c.B.CreateCall2(c.M->getOrInsertFunction(slowCallFnName,
-				c.ObjPtrTy, LHS->getType(), RHS->getType(), nullptr), LHS,
-			RHS);
+	Value *objResult = c.B.CreateCall(c.M->getOrInsertFunction(slowCallFnName,
+				c.ObjPtrTy, LHS->getType(), RHS->getType(), nullptr),
+			{LHS, RHS});
 	// And branch to the continuation block
 	c.B.CreateBr(cont);
 
