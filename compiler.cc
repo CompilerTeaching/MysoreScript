@@ -273,12 +273,13 @@ CompiledMethod ClosureDecl::compileMethod(Class *cls,
 		// The type of the object pointer argument
 		PointerType *ArgTy = cast<PointerType>(ClosureInvokeTy->params()[0]);
 		// The type of the object 
-		StructType *ObjTy = cast<StructType>(ArgTy);
+		StructType *ObjTy =
+			cast<StructType>(cast<PointerType>(ArgTy)->getElementType());
 		// This does pointer arithmetic on the first argument to get the address
 		// of the array of instance variables.
 		Value *iVarsArray = c.B.CreateStructGEP(ObjTy, c.F->arg_begin(), 1);
 		// The type of the instance variables array
-		Type *iVarsArrayTy = ObjTy->elements()[0];
+		Type *iVarsArrayTy = ObjTy->elements()[1];
 		// The type of the arguments array
 		for (int i=0 ; i<cls->indexedIVarCount ; i++)
 		{
