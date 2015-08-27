@@ -5,6 +5,7 @@
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Support/TargetSelect.h>
 
 using namespace llvm;
 using llvm::legacy::PassManager;
@@ -80,7 +81,9 @@ Compiler::Context::Context(Interpreter::SymbolTable &g) :
 	// These functions do nothing, they just ensure that the correct modules
 	// are not removed by the linker.
 	LLVMInitializeNativeTarget();
+	InitializeNativeTargetAsmPrinter();
 	LLVMLinkInMCJIT();
+
 }
 
 Value *Compiler::Context::lookupSymbolAddr(const std::string &str)
@@ -123,6 +126,7 @@ ClosureInvoke Compiler::Context::compile()
 	// following line:
 	//M->dump();
 
+	std::string FunctionName = F->getName();
 	std::string err;
 	EngineBuilder EB(std::move(M));
 	// Construct an execution engine (JIT)
@@ -141,7 +145,7 @@ ClosureInvoke Compiler::Context::compile()
 	// memory (and allow us to GC the functions if their addresses don't exist
 	// on the stack and they're replaced by specialised versions, but for now
 	// it's fine to just leak)
-	return (ClosureInvoke)EE->getPointerToFunction(F);
+	return (ClosureInvoke)EE->getFunctionAddress(FunctionName);
 }
 
 llvm::FunctionType *Compiler::Context::getMethodType(int ivars, int args)
@@ -349,9 +353,10 @@ ClosureInvoke ClosureDecl::compileClosure(Interpreter::SymbolTable &globalSymbol
 		// The type of the closure pointer argument
 		PointerType *ArgTy = cast<PointerType>(ClosureInvokeTy->params()[0]);
 		// The type of the closure object
-		StructType *ObjTy = cast<StructType>(ArgTy);
+		StructType *ObjTy =
+			cast<StructType>(cast<PointerType>(ArgTy)->getElementType());
 		// The type of the instance variables array
-		Type *boundVarsArrayTy = ObjTy->elements()[3];
+		Type *boundVarsArrayTy = ObjTy->elements()[4];
 
 		Value *boundVarsArray = c.B.CreateStructGEP(ObjTy, c.F->arg_begin(), 4);
 		int i=0;
