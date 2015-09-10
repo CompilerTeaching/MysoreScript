@@ -12,7 +12,7 @@ namespace {
  */
 inline bool needsGC(Obj o)
 {
-	return (o != nullptr) && (((intptr_t)o & 7) == 0);
+	return (o != nullptr) && ((reinterpret_cast<intptr_t>(o) & 7) == 0);
 }
 
 Interpreter::Context *currentContext;
@@ -252,17 +252,17 @@ Obj methodTrampoline10(Obj self, Selector cmd, Obj o0, Obj o1, Obj o2, Obj o3,
  * Array of trampolines, indexed by number or arguments.  
  */
 CompiledMethod methodTrampolines[] = {
-	(CompiledMethod)methodTrampoline0,
-	(CompiledMethod)methodTrampoline1,
-	(CompiledMethod)methodTrampoline2,
-	(CompiledMethod)methodTrampoline3,
-	(CompiledMethod)methodTrampoline4,
-	(CompiledMethod)methodTrampoline5,
-	(CompiledMethod)methodTrampoline6,
-	(CompiledMethod)methodTrampoline7,
-	(CompiledMethod)methodTrampoline8,
-	(CompiledMethod)methodTrampoline9,
-	(CompiledMethod)methodTrampoline10
+	reinterpret_cast<CompiledMethod>(methodTrampoline0),
+	reinterpret_cast<CompiledMethod>(methodTrampoline1),
+	reinterpret_cast<CompiledMethod>(methodTrampoline2),
+	reinterpret_cast<CompiledMethod>(methodTrampoline3),
+	reinterpret_cast<CompiledMethod>(methodTrampoline4),
+	reinterpret_cast<CompiledMethod>(methodTrampoline5),
+	reinterpret_cast<CompiledMethod>(methodTrampoline6),
+	reinterpret_cast<CompiledMethod>(methodTrampoline7),
+	reinterpret_cast<CompiledMethod>(methodTrampoline8),
+	reinterpret_cast<CompiledMethod>(methodTrampoline9),
+	reinterpret_cast<CompiledMethod>(methodTrampoline10)
 };
 } // end anonymous namespace
 
@@ -272,17 +272,17 @@ namespace Interpreter
  * Array of trampolines, indexed by number or arguments.  
  */
 ClosureInvoke closureTrampolines[] = {
-	(ClosureInvoke)closureTrampoline0,
-	(ClosureInvoke)closureTrampoline1,
-	(ClosureInvoke)closureTrampoline2,
-	(ClosureInvoke)closureTrampoline3,
-	(ClosureInvoke)closureTrampoline4,
-	(ClosureInvoke)closureTrampoline5,
-	(ClosureInvoke)closureTrampoline6,
-	(ClosureInvoke)closureTrampoline7,
-	(ClosureInvoke)closureTrampoline8,
-	(ClosureInvoke)closureTrampoline9,
-	(ClosureInvoke)closureTrampoline10
+	reinterpret_cast<ClosureInvoke>(closureTrampoline0),
+	reinterpret_cast<ClosureInvoke>(closureTrampoline1),
+	reinterpret_cast<ClosureInvoke>(closureTrampoline2),
+	reinterpret_cast<ClosureInvoke>(closureTrampoline3),
+	reinterpret_cast<ClosureInvoke>(closureTrampoline4),
+	reinterpret_cast<ClosureInvoke>(closureTrampoline5),
+	reinterpret_cast<ClosureInvoke>(closureTrampoline6),
+	reinterpret_cast<ClosureInvoke>(closureTrampoline7),
+	reinterpret_cast<ClosureInvoke>(closureTrampoline8),
+	reinterpret_cast<ClosureInvoke>(closureTrampoline9),
+	reinterpret_cast<ClosureInvoke>(closureTrampoline10)
 };
 void Value::set(Obj o)
 {
@@ -295,7 +295,7 @@ void Value::set(Obj o)
 	else if (!needsGC(object) && needsGC(o))
 	{
 		assert(holder == nullptr);
-		holder = (Obj*)GC_malloc_uncollectable(sizeof(Obj));
+		holder = reinterpret_cast<Obj*>(GC_malloc_uncollectable(sizeof(Obj)));
 		*holder = o;
 	}
 	else if (needsGC(object) && needsGC(o))
@@ -361,7 +361,7 @@ void Context::setSymbol(const std::string &name, Obj *val)
 	(*symbols.back())[name] = val;
 }
 
-}
+} // namespace Interpreter
 
 ////////////////////////////////////////////////////////////////////////////////
 // Interpreter methods on AST classes
@@ -429,7 +429,7 @@ Obj Call::evaluateExpr(Interpreter::Context &c)
 	if (!method)
 	{
 		assert(obj->isa == &ClosureClass);
-		Closure *closure = (Closure*)obj;
+		Closure *closure = reinterpret_cast<Closure*>(obj);
 		return callCompiledClosure(closure->invoke, closure, args, i);
 	}
 	// Look up the selector and method to call
@@ -502,14 +502,14 @@ Obj ClosureDecl::evaluateExpr(Interpreter::Context &c)
 	C->AST = this;
 	C->invoke = compiledClosure ? compiledClosure :
 		Interpreter::closureTrampolines[params];
-	c.setSymbol(name->name, (Obj)C);
+	c.setSymbol(name->name, reinterpret_cast<Obj>(C));
 	int i=0;
 	// Copy bound variables into the closure.
 	for (auto &var : boundVars)
 	{
 		C->boundVars[i++] = *c.lookupSymbol(var);
 	}
-	return (Obj)C;
+	return reinterpret_cast<Obj>(C);
 }
 
 Obj ClosureDecl::interpretMethod(Interpreter::Context &c, Method *mth, Obj self,
@@ -522,13 +522,13 @@ Obj ClosureDecl::interpretMethod(Interpreter::Context &c, Method *mth, Obj self,
 	if (executionCount == compileThreshold)
 	{
 		mth->function = compileMethod(cls, c.globalSymbols);
-		compiledClosure = (ClosureInvoke)mth->function;
+		compiledClosure = reinterpret_cast<ClosureInvoke>(mth->function);
 	}
 	// If we now have a compiled version, try to execute it.
 	if (compiledClosure)
 	{
-		return callCompiledMethod((CompiledMethod)compiledClosure, self, sel,
-				args, parameters->arguments.objects().size());
+		return callCompiledMethod(reinterpret_cast<CompiledMethod>(compiledClosure),
+			self, sel, args, parameters->arguments.objects().size());
 	}
 	// Create a new symbol table for this method.
 	Interpreter::SymbolTable closureSymbols;
@@ -544,7 +544,7 @@ Obj ClosureDecl::interpretMethod(Interpreter::Context &c, Method *mth, Obj self,
 	c.setSymbol("self", &self);
 	c.setSymbol("cmd", &cmdObj);
 	// Add the addresses of the ivars in the self object to the symbol table.
-	Obj *ivars = ((Obj*)(&self->isa)) + 1;
+	Obj *ivars = (reinterpret_cast<Obj*>(&self->isa)) + 1;
 	for (int32_t i=0 ; i<cls->indexedIVarCount ; i++)
 	{
 		c.setSymbol(cls->indexedIVarNames[i], &ivars[i]);
@@ -622,19 +622,19 @@ Obj StringLiteral::evaluateExpr(Interpreter::Context &c)
 	str->length = MysoreScript::createSmallInteger(value.size());
 	// Copy the characters into the object
 	value.copy(str->characters, value.size(), 0);
-	return (Obj)str;
+	return reinterpret_cast<Obj>(str);
 }
 
 void IfStatement::interpret(Interpreter::Context &c)
 {
-	if (((intptr_t)condition->evaluate(c)) & ~7)
+	if ((reinterpret_cast<intptr_t>(condition->evaluate(c))) & ~7)
 	{
 		body->interpret(c);
 	}
 }
 void WhileLoop::interpret(Interpreter::Context &c)
 {
-	while (((intptr_t)condition->evaluate(c)) & ~7)
+	while ((reinterpret_cast<intptr_t>(condition->evaluate(c))) & ~7)
 	{
 		body->interpret(c);
 	}
@@ -670,12 +670,12 @@ Obj BinOp::evaluateExpr(Interpreter::Context &c)
 		// really is a small integer is not valid - if we're doing a comparison
 		// then the arguments might be pointers.
 		return createSmallInteger(evaluateWithIntegers(
-					((intptr_t)LHS) >> 3,
-					((intptr_t)RHS) >> 3));
+					(reinterpret_cast<intptr_t>(LHS)) >> 3,
+					(reinterpret_cast<intptr_t>(RHS)) >> 3));
 	}
 	Selector sel = lookupSelector(methodName());
 	CompiledMethod mth = compiledMethodForSelector(LHS, sel);
-	return ((Obj(*)(Obj,Selector,Obj))mth)(LHS, sel, RHS);
+	return (reinterpret_cast<Obj(*)(Obj,Selector,Obj)>(mth))(LHS, sel, RHS);
 }
 
 void Return::interpret(Interpreter::Context &c)

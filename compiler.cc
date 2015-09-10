@@ -25,7 +25,8 @@ namespace {
 template<typename T>
 Value *staticAddress(Compiler::Context &c, T *ptr, Type *ty)
 {
-	return c.B.CreateIntToPtr(ConstantInt::get(c.ObjIntTy, (uintptr_t)ptr), ty);
+	return c.B.CreateIntToPtr(
+		ConstantInt::get(c.ObjIntTy, reinterpret_cast<uintptr_t>(ptr)), ty);
 }
 /**
  * Generate a small integer object from an integer value.
@@ -145,7 +146,7 @@ ClosureInvoke Compiler::Context::compile()
 	// memory (and allow us to GC the functions if their addresses don't exist
 	// on the stack and they're replaced by specialised versions, but for now
 	// it's fine to just leak)
-	return (ClosureInvoke)EE->getFunctionAddress(FunctionName);
+	return reinterpret_cast<ClosureInvoke>(EE->getFunctionAddress(FunctionName));
 }
 
 llvm::FunctionType *Compiler::Context::getMethodType(int ivars, int args)
@@ -301,7 +302,7 @@ CompiledMethod ClosureDecl::compileMethod(Class *cls,
 		c.B.CreateRet(ConstantPointerNull::get(c.ObjPtrTy));
 	}
 	// Generate the compiled code.
-	return (CompiledMethod)c.compile();
+	return reinterpret_cast<CompiledMethod>(c.compile());
 }
 
 ClosureInvoke ClosureDecl::compileClosure(Interpreter::SymbolTable &globalSymbols)
@@ -584,13 +585,13 @@ Value *StringLiteral::compileExpression(Compiler::Context &c)
 {
 	// If we don't have a cached string object for this literal, then poke the
 	// interpreter to generate one.
-	if (!(Obj)cache)
+	if (!static_cast<Obj>(cache))
 	{
 		Interpreter::Context ic;
 		cache = evaluateExpr(ic);
 	}
 	// Return a constant pointer to the cached value.
-	return staticAddress(c, (Obj)cache, c.ObjPtrTy);
+	return staticAddress(c, static_cast<Obj>(cache), c.ObjPtrTy);
 }
 Value *Number::compileExpression(Compiler::Context &c)
 {
@@ -750,7 +751,7 @@ Value *compileBinaryOp(Compiler::Context &c, Value *LHS, Value *RHS,
 	// Return the result
 	return result;
 }
-}
+} // End anonymous namespace
 
 Value *Subtract::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
 {

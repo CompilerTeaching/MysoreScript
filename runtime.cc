@@ -59,7 +59,7 @@ File *FileOpen(File *f, Selector sel, String *file)
 		close(f->fd);
 	}
 	// The file name must be a string
-	if (file == nullptr || isInteger((Obj)file) || file->isa != &StringClass)
+	if (file == nullptr || isInteger(reinterpret_cast<Obj>(file)) || file->isa != &StringClass)
 	{
 		return nullptr;
 	}
@@ -78,7 +78,7 @@ Obj FileClose(File *f, Selector sel)
 		close(f->fd);
 		f->fd = 0;
 	}
-	return (Obj)f;
+	return reinterpret_cast<Obj>(f);
 }
 
 /**
@@ -117,14 +117,14 @@ String *FileReadLine(File *f, Selector sel)
 Obj FileWrite(File *f, Selector sel, String *data)
 {
 	// The data must be a string
-	if (data == nullptr || isInteger((Obj)data) || data->isa != &StringClass)
+	if (data == nullptr || isInteger(reinterpret_cast<Obj>(data)) || data->isa != &StringClass)
 	{
 		return nullptr;
 	}
 	int fd = f->fd ? f->fd : STDOUT_FILENO;
 	// FIXME: Handle interrupted system calls correctly!
 	write(fd, data->characters, getInteger(data->length));
-	return (Obj)f;
+	return reinterpret_cast<Obj>(f);
 }
 
 /**
@@ -210,7 +210,7 @@ Obj ArrayAtPut(Array *arr, Selector sel, Obj idx, Obj obj)
 		// little bit, which should make life a bit more interesting for
 		// students...
 		size_t newSize = i + 1;
-		Obj *buffer = (Obj*)GC_MALLOC(newSize * sizeof(Obj));
+		Obj *buffer = reinterpret_cast<Obj*>(GC_MALLOC(newSize * sizeof(Obj)));
 		memcpy(buffer, arr->buffer, len * sizeof(Obj));
 		arr->buffer = buffer;
 		arr->bufferSize = createSmallInteger(newSize);
@@ -247,7 +247,7 @@ Obj StringAdd(String *str, Selector sel, String *other)
 {
 	// If we are trying to concatenate something that's not a string, return
 	// null
-	if (other == nullptr || isInteger((Obj)other) || other->isa != &StringClass)
+	if (other == nullptr || isInteger(reinterpret_cast<Obj>(other)) || other->isa != &StringClass)
 	{
 		return nullptr;
 	}
@@ -259,7 +259,7 @@ Obj StringAdd(String *str, Selector sel, String *other)
 	newStr->length = createSmallInteger(lenTotal);
 	memcpy(newStr->characters, str->characters, len1);
 	memcpy(newStr->characters+len1, other->characters, len2);
-	return (Obj)newStr;
+	return reinterpret_cast<Obj>(newStr);
 }
 
 /**
@@ -268,7 +268,7 @@ Obj StringAdd(String *str, Selector sel, String *other)
 Obj StringCmp(String *str, Selector sel, String *other)
 {
 	// If we are trying to compare something that's not a string, return null
-	if (other == nullptr || isInteger((Obj)other) || other->isa != &StringClass)
+	if (other == nullptr || isInteger(reinterpret_cast<Obj>(other)) || other->isa != &StringClass)
 	{
 		return nullptr;
 	}
@@ -345,25 +345,25 @@ struct Method FileMethods[] =
 	{
 		open,
 		0,
-		(CompiledMethod)FileOpen,
+		reinterpret_cast<CompiledMethod>(FileOpen),
 		nullptr
 	},
 	{
 		close,
 		0,
-		(CompiledMethod)FileClose,
+		reinterpret_cast<CompiledMethod>(FileClose),
 		nullptr
 	},
 	{
 		readline,
 		0,
-		(CompiledMethod)FileReadLine,
+		reinterpret_cast<CompiledMethod>(FileReadLine),
 		nullptr
 	},
 	{
 		write,
 		0,
-		(CompiledMethod)FileWrite,
+		reinterpret_cast<CompiledMethod>(FileWrite),
 		nullptr
 	}
 };
@@ -375,31 +375,31 @@ struct Method StringMethods[] =
 	{
 		length,
 		0,
-		(CompiledMethod)StringLength,
+		reinterpret_cast<CompiledMethod>(StringLength),
 		nullptr
 	},
 	{
 		charAt,
 		1,
-		(CompiledMethod)StringCharAt,
+		reinterpret_cast<CompiledMethod>(StringCharAt),
 		nullptr
 	},
 	{
 		dump,
 		0,
-		(CompiledMethod)StringDump,
+		reinterpret_cast<CompiledMethod>(StringDump),
 		nullptr
 	},
 	{
 		add,
 		1,
-		(CompiledMethod)StringAdd,
+		reinterpret_cast<CompiledMethod>(StringAdd),
 		nullptr
 	},
 	{
 		compare,
 		1,
-		(CompiledMethod)StringCmp,
+		reinterpret_cast<CompiledMethod>(StringCmp),
 		nullptr
 	}
 };
@@ -411,7 +411,7 @@ struct Method NumberMethods[] =
 	{
 		dump,
 		0,
-		(CompiledMethod)NumberDump,
+		reinterpret_cast<CompiledMethod>(NumberDump),
 		nullptr
 	}
 };
@@ -423,19 +423,19 @@ struct Method ArrayMethods[] =
 	{
 		length,
 		0,
-		(CompiledMethod)ArrayLength,
+		reinterpret_cast<CompiledMethod>(ArrayLength),
 		nullptr
 	},
 	{
 		at,
 		1,
-		(CompiledMethod)ArrayAt,
+		reinterpret_cast<CompiledMethod>(ArrayAt),
 		nullptr
 	},
 	{
 		atPut,
 		2,
-		(CompiledMethod)ArrayAtPut,
+		reinterpret_cast<CompiledMethod>(ArrayAtPut),
 		nullptr
 	}
 };
@@ -452,7 +452,7 @@ const char *ArrayIvars[] = { "length", "bufferSize", "buffer" };
  */
 const char *FileIvars[] = { "fd" };
 
-}
+}  // namespace
 
 namespace MysoreScript
 {
@@ -608,17 +608,17 @@ Obj callCompiledMethod(CompiledMethod m, Obj receiver, Selector sel, Obj *args,
 			assert(0 && "Too many arguments!");
 			return nullptr;
 		case 0:
-			return ((Obj(*)(Obj, Selector))m)(receiver, sel);
+			return (reinterpret_cast<Obj(*)(Obj, Selector)>(m))(receiver, sel);
 		case 1:
-			return ((Obj(*)(Obj, Selector, Obj))m)(receiver, sel, args[0]);
+			return (reinterpret_cast<Obj(*)(Obj, Selector, Obj)>(m))(receiver, sel, args[0]);
 		case 2:
-			return ((Obj(*)(Obj, Selector, Obj, Obj))m)(receiver, sel, args[0],
+			return (reinterpret_cast<Obj(*)(Obj, Selector, Obj, Obj)>(m))(receiver, sel, args[0],
 					args[1]);
 		case 3:
-			return ((Obj(*)(Obj, Selector, Obj, Obj, Obj))m)(receiver, sel,
+			return (reinterpret_cast<Obj(*)(Obj, Selector, Obj, Obj, Obj)>(m))(receiver, sel,
 					args[0], args[1], args[2]);
 		case 4:
-			return ((Obj(*)(Obj, Selector, Obj, Obj, Obj, Obj))m)(receiver,
+			return (reinterpret_cast<Obj(*)(Obj, Selector, Obj, Obj, Obj, Obj)>(m))(receiver,
 					sel, args[0], args[1], args[2], args[3]);
 	}
 }
@@ -632,16 +632,16 @@ Obj callCompiledClosure(ClosureInvoke m, Closure *receiver, Obj *args,
 			assert(0 && "Too many arguments!");
 			return nullptr;
 		case 0:
-			return ((Obj(*)(Closure*))m)(receiver);
+			return (reinterpret_cast<Obj(*)(Closure*)>(m))(receiver);
 		case 1:
-			return ((Obj(*)(Closure*, Obj))m)(receiver, args[0]);
+			return (reinterpret_cast<Obj(*)(Closure*, Obj)>(m))(receiver, args[0]);
 		case 2:
-			return ((Obj(*)(Closure*, Obj, Obj))m)(receiver, args[0], args[1]);
+			return (reinterpret_cast<Obj(*)(Closure*, Obj, Obj)>(m))(receiver, args[0], args[1]);
 		case 3:
-			return ((Obj(*)(Closure*, Obj, Obj, Obj))m)(receiver, args[0], args[1],
+			return (reinterpret_cast<Obj(*)(Closure*, Obj, Obj, Obj)>(m))(receiver, args[0], args[1],
 					args[2]);
 		case 4:
-			return ((Obj(*)(Closure*, Obj, Obj, Obj, Obj))m)(receiver, args[0],
+			return (reinterpret_cast<Obj(*)(Closure*, Obj, Obj, Obj, Obj)>(m))(receiver, args[0],
 					args[1], args[2], args[3]);
 	}
 }
@@ -688,5 +688,5 @@ CompiledMethod compiledMethodForSelector(Obj obj, Selector sel)
 }
 }
 
-}
+}  // namespace MysoreScript
 

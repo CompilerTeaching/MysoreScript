@@ -118,7 +118,6 @@ int main(int argc, char **argv)
 	// If a filename was specified, then try to parse and execute it.
 	if (file)
 	{
-		c1 = clock();
 		// Open the file
 		pegmatite::AsciiFileInput input(open(file, O_RDONLY));
 		c1 = clock();
@@ -151,7 +150,6 @@ int main(int argc, char **argv)
 		// If it was an empty line, exit REPL mode
 		if (buffer.size() == 0)
 		{
-			repl = false;
 			break;
 		}
 		// Parse the line
