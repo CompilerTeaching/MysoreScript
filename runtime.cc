@@ -1,8 +1,8 @@
 #include "runtime.hh"
 #include <fcntl.h>
 #include <unistd.h>
-#include <stdio.h>
 #include <string.h>
+#include <iostream>
 #include <unordered_map>
 #include <vector>
 #include <gc.h>
@@ -27,13 +27,13 @@ Obj invalidMethod(Obj obj, Selector sel)
 	auto selName = selNames[sel];
 	if (!obj)
 	{
-		fprintf(stderr, "\nERROR: method %s called on null object\n",
-				selName.c_str());
+		std::cerr << std::endl << "ERROR: method " << selName
+		          << " called on null object." << std::endl;
 		return nullptr;
 	}
 	Class *cls = isInteger(obj) ? &SmallIntClass : obj->isa;
-	fprintf(stderr, "\nERROR: %s does not respond to selector %s\n",
-			cls->className, selName.c_str());
+	std::cerr << std::endl << "ERROR: " << cls->className
+	          << " does not respond to selector " << selName << '.' << std::endl;
 	return nullptr;
 }
 
@@ -228,7 +228,7 @@ Obj ArrayAtPut(Array *arr, Selector sel, Obj idx, Obj obj)
  */
 Obj NumberDump(Obj str, Selector sel)
 {
-	fprintf(stderr, "%lld\n", (long long)getInteger(str));
+	std::cerr << getInteger(str) << std::endl;
 	return nullptr;
 }
 /**

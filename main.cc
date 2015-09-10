@@ -21,7 +21,6 @@
 #include <iostream>
 #include <ctype.h>
 #include <fcntl.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <sys/resource.h>
 #include <time.h>
@@ -45,20 +44,23 @@ static void logTimeSince(clock_t c1, const char *msg)
 	clock_t c2 = clock();
 	struct rusage r;
 	getrusage(RUSAGE_SELF, &r);
-	fprintf(stderr, "%s took %f seconds.	Peak used %ldKB.\n", msg,
-		((double)c2 - (double)c1) / (double)CLOCKS_PER_SEC, r.ru_maxrss/1024);
+	auto oldLocale = std::cerr.imbue(std::locale("en_GB.UTF-8"));
+	std::cerr << msg << " took "
+	          << (static_cast<double>(c2) - static_cast<double>(c1)) / static_cast<double>(CLOCKS_PER_SEC)
+	          << " seconds.	Peak used " <<  r.ru_maxrss/1024 << "KB." << std::endl;
+	std::cerr.imbue(oldLocale);
 }
 /**
  * Print the usage message.
  */
 void usage(const char *cmd)
 {
-	fprintf(stderr, "usage: %s [-himt] [-f {file name}]\n", cmd);
-	fprintf(stderr, " -h          Display this help\n");
-	fprintf(stderr, " -i          Interpreter, enable REPL mode\n");
-	fprintf(stderr, " -m          Display memory usage stats on exit\n");
-	fprintf(stderr, " -t          Display timing information\n");
-	fprintf(stderr, " -f {file}   Load and execute file\n");
+	std::cerr << "usage: " << cmd << " [-himt] [-f {file name}]" << std::endl
+	          << " -h          Display this help" << std::endl
+	          << " -i          Interpreter, enable REPL mode" << std::endl
+	          << " -m          Display memory usage stats on exit" << std::endl
+	          << " -t          Display timing information" << std::endl
+	          << " -f {file}   Load and execute file" << std::endl;
 }
 
 int main(int argc, char **argv)
@@ -172,15 +174,16 @@ int main(int argc, char **argv)
 	// Print some memory usage stats, if requested.
 	if (memstats)
 	{
-		fprintf(stderr, "Allocated %lld bytes during execution.\n", (long
-					long)GC_get_total_bytes());
-		fprintf(stderr, "GC heap size: %lld bytes.\n",
-				(long long)GC_get_heap_size());
+		std::cerr.imbue(std::locale("en_GB.UTF-8"));
+		std::cerr << "Allocated a total of " << GC_get_total_bytes()
+		          << " bytes during execution." << std::endl;
+		std::cerr << "GC heap size: " << GC_get_heap_size() << " bytes."
+		          << std::endl;
 		ast = nullptr;
 		replASTs.clear();
 		GC_gcollect_and_unmap();
-		fprintf(stderr, "After collection, GC heap size: %lld bytes.\n",
-				(long long)GC_get_heap_size());
+		std::cerr << "After collection, GC heap size: " << GC_get_heap_size()
+		          << " bytes." << std::endl;
 	}
 	return 0;
 }
