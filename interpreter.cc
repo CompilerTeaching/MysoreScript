@@ -295,6 +295,9 @@ void Value::set(Obj o)
 	else if (!needsGC(object) && needsGC(o))
 	{
 		assert(holder == nullptr);
+		// If we're wrapping an object that needs to be tracked by the GC, then
+		// we allocate a small buffer that is scanned by the GC, but not
+		// collected by it, to hold the value.
 		holder = reinterpret_cast<Obj*>(GC_malloc_uncollectable(sizeof(Obj)));
 		*holder = o;
 	}
