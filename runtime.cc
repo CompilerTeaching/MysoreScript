@@ -535,7 +535,7 @@ Selector lookupSelector(const std::string &str)
 		}
 	}
 	// Look up the selector
-	size_t next = selectors.size();
+	size_t next = selectors.size() + 1;
 	Selector &sel = selectors[str];
 	// If it doesn't exist, register it
 	if (sel == 0)
