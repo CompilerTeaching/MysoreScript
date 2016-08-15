@@ -72,7 +72,6 @@ Value *getAsSmallInt(Compiler::Context &c, Value *i)
 
 Compiler::Context::Context(Interpreter::SymbolTable &g) :
 	globalSymbols(g),
-	C(getGlobalContext()),
 	M(new Module("MysoreScript", C)),
 	B(C),
 	ObjPtrTy(Type::getInt8PtrTy(C)),
@@ -244,9 +243,9 @@ CompiledMethod ClosureDecl::compileMethod(Class *cls,
 	auto alloca = paramAllocas.begin();
 	// First store the self pointer in its slot (which is already in the symbol
 	// table)
-	c.B.CreateStore(c.B.CreateBitCast(AI++, c.ObjPtrTy), selfPtr);
+	c.B.CreateStore(c.B.CreateBitCast(&*(AI++), c.ObjPtrTy), selfPtr);
 	// The selector is a 32-bit integer, promote it to an object and store it.
-	c.B.CreateStore(getAsObject(c, compileSmallInt(c, c.B.CreateZExt(AI++,
+	c.B.CreateStore(getAsObject(c, compileSmallInt(c, c.B.CreateZExt(&*(AI++),
 						c.ObjIntTy))), cmdPtr);
 	for (auto &arg : params)
 	{
@@ -254,7 +253,7 @@ CompiledMethod ClosureDecl::compileMethod(Class *cls,
 		// reading the generated IR a bit easier.
 		(*alloca)->setName(arg->name);
 		// Store the argument in the stack slot.
-		c.B.CreateStore(AI++, *alloca);
+		c.B.CreateStore(&*(AI++), *alloca);
 		// Set this slot (specifically, the address of this stack allocation) to
 		// the address used when looking up the name of the argument.
 		c.symbols[arg->name] = *(alloca++);
@@ -278,7 +277,7 @@ CompiledMethod ClosureDecl::compileMethod(Class *cls,
 			cast<StructType>(cast<PointerType>(ArgTy)->getElementType());
 		// This does pointer arithmetic on the first argument to get the address
 		// of the array of instance variables.
-		Value *iVarsArray = c.B.CreateStructGEP(ObjTy, c.F->arg_begin(), 1);
+		Value *iVarsArray = c.B.CreateStructGEP(ObjTy, &*c.F->arg_begin(), 1);
 		// The type of the instance variables array
 		Type *iVarsArrayTy = ObjTy->elements()[1];
 		// The type of the arguments array
@@ -333,11 +332,11 @@ ClosureInvoke ClosureDecl::compileClosure(Interpreter::SymbolTable &globalSymbol
 	}
 	auto alloca = paramAllocas.begin();
 
-	c.B.CreateStore(c.B.CreateBitCast(AI++, c.ObjPtrTy), selfPtr);
+	c.B.CreateStore(c.B.CreateBitCast(&*(AI++), c.ObjPtrTy), selfPtr);
 	for (auto &arg : params)
 	{
 		(*alloca)->setName(arg->name);
-		c.B.CreateStore(AI++, *alloca);
+		c.B.CreateStore(&*(AI++), *alloca);
 		c.symbols[arg->name] = *(alloca++);
 	}
 	alloca = localAllocas.begin();
@@ -360,7 +359,7 @@ ClosureInvoke ClosureDecl::compileClosure(Interpreter::SymbolTable &globalSymbol
 		// The type of the instance variables array
 		Type *boundVarsArrayTy = ObjTy->elements()[4];
 
-		Value *boundVarsArray = c.B.CreateStructGEP(ObjTy, c.F->arg_begin(), 4);
+		Value *boundVarsArray = c.B.CreateStructGEP(ObjTy, &*c.F->arg_begin(), 4);
 		int i=0;
 		for (auto &bound : boundVars)
 		{

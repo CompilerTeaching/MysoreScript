@@ -26,7 +26,7 @@ namespace Compiler
 		 * different functions in the background in different threads by
 		 * changing this.
 		 */
-		llvm::LLVMContext  &C;
+		llvm::LLVMContext  C;
 		/**
 		 * The current module.  Each function is compiled in a separate module.
 		 */
