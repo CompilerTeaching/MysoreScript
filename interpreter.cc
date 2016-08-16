@@ -700,7 +700,11 @@ void ClassDecl::interpret(Interpreter::Context &c)
 	cls->superclass = name ? lookupClass(superclassName->name) : nullptr;
 	cls->className = strdup(clsName.c_str());
 	cls->methodCount = methods.size();
-	cls->indexedIVarCount = ivars.size();
+	if (cls->superclass)
+	{
+		cls->indexedIVarCount = cls->superclass->indexedIVarCount;
+	}
+	cls->indexedIVarCount += ivars.size();
 	// Construct the method list, with one Method structure for the metadata for
 	// each method.
 	cls->methodList = new Method[cls->methodCount];
@@ -724,6 +728,14 @@ void ClassDecl::interpret(Interpreter::Context &c)
 	// Set up the names of the instance variables.
 	cls->indexedIVarNames = new const char*[cls->indexedIVarCount];
 	const char **ivar = cls->indexedIVarNames;
+	// Copy superclass ivars.
+	if (cls->superclass != nullptr)
+	{
+		for (int i=0 ; i<cls->superclass->indexedIVarCount ; i++)
+		{
+			*(ivar++) = cls->superclass->indexedIVarNames[i];
+		}
+	}
 	for (auto &i : ivars)
 	{
 		*(ivar++) = strdup(i->name->name.c_str());
