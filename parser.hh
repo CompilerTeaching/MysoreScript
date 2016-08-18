@@ -21,7 +21,7 @@ namespace Parser
 		CONNECT(CmpGt, gt_cmp);
 		CONNECT(CmpLE, le_cmp);
 		CONNECT(CmpGE, ge_cmp);
-		CONNECT(StringLiteral, string);
+		CONNECT(StringLiteral, string_body);
 		CONNECT(Identifier, identifier);
 		CONNECT(ArgList, callArgList);
 		CONNECT(ParamList, argList);

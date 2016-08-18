@@ -107,9 +107,14 @@ struct MysoreScriptGrammar
 	 */
 	ExprPtr character = term(("\\\""_E | !ExprPtr('"') >> (nl('\n') | any())));
 	/**
+	 * The body of a string.  An AST builder can use this to get just the
+	 * characters in the string, without the enclosing quotes.
+	 */
+	Rule string_body      = *character;
+	/**
 	 * Strings any characters, enclosed in quotes.
 	 */
-	Rule string      = '"' >> *character >> '"';
+	Rule string  = '"' >> string_body >> '"';
 	/**
 	 * Letters - valid characters for the start of an identifier.
 	 */

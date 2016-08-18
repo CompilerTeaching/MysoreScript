@@ -174,7 +174,6 @@ namespace AST
 			std::stringstream stream;
 			for_each(r.begin(), r.end(), [&](char c) {stream << c;});
 			value = stream.str();
-			value = value.substr(1, value.size()-2);
 			std::string::size_type newline;
 			while ((newline = value.find("\\n")) != std::string::npos)
 			{
