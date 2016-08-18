@@ -10,7 +10,6 @@ set(mysorescript_CXX_SRCS
 	compiler.cc
 	interpreter.cc
 	main.cc
-	parser.cc
 	runtime.cc
 )
 set(LLVM_LIBS

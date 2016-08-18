@@ -129,7 +129,10 @@ namespace AST
 		 * so this will construct the numeric value from the text.
 		 */
 		void construct(const pegmatite::InputRange &r,
-		               pegmatite::ASTStack &st) override;
+		               pegmatite::ASTStack &st) override
+		{
+			pegmatite::constructValue(r, value);
+		}
 		/**
 		 * All literals are constant expressions.
 		 */
@@ -166,7 +169,18 @@ namespace AST
 		 * Construct the string from the source text.
 		 */
 		void construct(const pegmatite::InputRange &r,
-		               pegmatite::ASTStack &st) override;
+		               pegmatite::ASTStack &st) override
+		{
+			std::stringstream stream;
+			for_each(r.begin(), r.end(), [&](char c) {stream << c;});
+			value = stream.str();
+			value = value.substr(1, value.size()-2);
+			std::string::size_type newline;
+			while ((newline = value.find("\\n")) != std::string::npos)
+			{
+				value.replace(newline, 2, "\n");
+			}
+		}
 		/**
 		 * Literals are constant expressions.
 		 */
@@ -473,7 +487,10 @@ namespace AST
 		 * Construct the string value from the input range in the source.
 		 */
 		void construct(const pegmatite::InputRange &r,
-		               pegmatite::ASTStack &st) override;
+		               pegmatite::ASTStack &st) override
+		{
+			pegmatite::constructValue(r, name);
+		}
 	};
 	/**
 	 * A parameter list for a closure declaration.  This contains list of
