@@ -634,54 +634,6 @@ Value *NewExpr::compileExpression(Compiler::Context &c)
 	return c.B.CreateCall(newFn, clsPtr, "new");
 }
 
-Value *CmpNe::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
-{
-	// Comparisons work on small integers or pointers, so just insert the
-	// relevant compare instruction.
-	Value *cmp = c.B.CreateICmpNE(getAsSmallInt(c, LHS),
-	                              getAsSmallInt(c, RHS), "cmp");
-	// The result is an i1 (one-bit integer), so zero-extend it to the size of a
-	// small integer
-	cmp = c.B.CreateZExt(cmp, c.ObjIntTy, "cmp_object");
-	// Then set the low bit to make it an object.
-	return compileSmallInt(c, cmp);
-}
-Value *CmpEq::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
-{
-	Value *cmp = c.B.CreateICmpEQ(getAsSmallInt(c, LHS),
-	                              getAsSmallInt(c, RHS), "cmp");
-	cmp = c.B.CreateZExt(cmp, c.ObjIntTy, "cmp_object");
-	return compileSmallInt(c, cmp);
-}
-Value *CmpGt::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
-{
-	Value *cmp = c.B.CreateICmpSGT(getAsSmallInt(c, LHS),
-	                              getAsSmallInt(c, RHS), "cmp");
-	cmp = c.B.CreateZExt(cmp, c.ObjIntTy, "cmp_object");
-	return compileSmallInt(c, cmp);
-}
-Value *CmpLt::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
-{
-	Value *cmp = c.B.CreateICmpSLT(getAsSmallInt(c, LHS),
-	                              getAsSmallInt(c, RHS), "cmp");
-	cmp = c.B.CreateZExt(cmp, c.ObjIntTy, "cmp_object");
-	return compileSmallInt(c, cmp);
-}
-Value *CmpGE::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
-{
-	Value *cmp = c.B.CreateICmpSGE(getAsSmallInt(c, LHS),
-	                              getAsSmallInt(c, RHS), "cmp");
-	cmp = c.B.CreateZExt(cmp, c.ObjIntTy, "cmp_object");
-	return compileSmallInt(c, cmp);
-}
-Value *CmpLE::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
-{
-		Value *cmp = c.B.CreateICmpSLE(getAsSmallInt(c, LHS),
-	                              getAsSmallInt(c, RHS), "cmp");
-	cmp = c.B.CreateZExt(cmp, c.ObjIntTy, "cmp_object");
-	return compileSmallInt(c, cmp);
-}
-
 namespace {
 /**
  * A function type that is used by the `compileBinaryOp` function.  Each
@@ -690,15 +642,35 @@ namespace {
  * two arguments.
  */
 typedef std::function<Value*(Compiler::Context &c, Value*, Value*)> BinOpFn;
+
+/**
+ * Helper function that inserts all of the code required for comparison
+ * operations.
+ */
+Value *compileCompare(Compiler::Context &c, CmpInst::Predicate Op,
+                    Value *LHS, Value *RHS)
+{
+	// Comparisons work on small integers or pointers, so just insert the
+	// relevant compare instruction.
+	Value *cmp = c.B.CreateICmp(Op, getAsSmallInt(c, LHS),
+	                             getAsSmallInt(c, RHS), "cmp");
+	// The result is an i1 (one-bit integer), so zero-extend it to the size of a
+	// small integer
+	cmp = c.B.CreateZExt(cmp, c.ObjIntTy, "cmp_object");
+	// Then set the low bit to make it an object.
+	return compileSmallInt(c, cmp);
+
+}
+
 /**
  * Helper function that inserts all of the code required for small integer
  * operations, either calling the relevant method or doing the arithmetic.  For
  * real objects, the function named by the `slowCallFnName` parameter is called,
- * which then invokes the correct method.  For integers, the `intFn` closure is
- * called to insert the correct operation.
+ * which then invokes the correct method.  For integers, the function inserts
+ * the binary op specified by `Op`.
  */
 Value *compileBinaryOp(Compiler::Context &c, Value *LHS, Value *RHS,
-		BinOpFn intFn, const char *slowCallFnName)
+		Instruction::BinaryOps Op, const char *slowCallFnName)
 {
 	// Get the two operands as integer values
 	Value *LHSInt = getAsSmallInt(c, LHS);
@@ -725,7 +697,7 @@ Value *compileBinaryOp(Compiler::Context &c, Value *LHS, Value *RHS,
 	LHSInt = c.B.CreateAShr(LHSInt, ConstantInt::get(c.ObjIntTy, 3));
 	RHSInt = c.B.CreateAShr(RHSInt, ConstantInt::get(c.ObjIntTy, 3));
 	// Invoke the function passed by the caller to insert the correct operation.
-	Value *intResult  = intFn(c, LHSInt, RHSInt);
+	Value *intResult  = c.B.CreateBinOp(Op, LHSInt, RHSInt);
 	// Now cast the result to an object and branch to the continue block
 	intResult = getAsObject(c, compileSmallInt(c, intResult));
 	c.B.CreateBr(cont);
@@ -752,37 +724,43 @@ Value *compileBinaryOp(Compiler::Context &c, Value *LHS, Value *RHS,
 }
 } // End anonymous namespace
 
+Value *CmpNe::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
+{
+	return compileCompare(c, CmpInst::Predicate::ICMP_NE, LHS, RHS);
+}
+Value *CmpEq::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
+{
+	return compileCompare(c, CmpInst::Predicate::ICMP_EQ, LHS, RHS);
+}
+Value *CmpGt::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
+{
+	return compileCompare(c, CmpInst::Predicate::ICMP_SGT, LHS, RHS);
+}
+Value *CmpLt::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
+{
+	return compileCompare(c, CmpInst::Predicate::ICMP_SLT, LHS, RHS);
+}
+Value *CmpGE::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
+{
+	return compileCompare(c, CmpInst::Predicate::ICMP_SGE, LHS, RHS);
+}
+Value *CmpLE::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
+{
+	return compileCompare(c, CmpInst::Predicate::ICMP_SLE, LHS, RHS);
+}
 Value *Subtract::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
 {
-	BinOpFn intFn = [](Compiler::Context &c, Value *LHS, Value *RHS) {
-		return c.B.CreateSub(LHS, RHS);
-	};
-	return compileBinaryOp(c, LHS, RHS, intFn, "mysoreScriptAdd");
+	return compileBinaryOp(c, LHS, RHS, Instruction::Sub, "mysoreScriptAdd");
 }
 Value *Add::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
 {
-	BinOpFn intFn = [](Compiler::Context &c, Value *LHS, Value *RHS) {
-		return c.B.CreateAdd(LHS, RHS);
-	};
-	BinOpFn objFn = [](Compiler::Context &c, Value *LHS, Value *RHS) {
-		return compileSmallInt(c, 42);
-	};
-	return compileBinaryOp(c, LHS, RHS, intFn, "mysoreScriptSub");
+	return compileBinaryOp(c, LHS, RHS, Instruction::Add, "mysoreScriptSub");
 }
 Value *Multiply::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
 {
-	BinOpFn intFn = [](Compiler::Context &c, Value *LHS, Value *RHS) {
-		return c.B.CreateMul(LHS, RHS);
-	};
-	return compileBinaryOp(c, LHS, RHS, intFn, "mysoreScriptMul");
+	return compileBinaryOp(c, LHS, RHS, Instruction::Mul, "mysoreScriptMul");
 }
 Value *Divide::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
 {
-	BinOpFn intFn = [](Compiler::Context &c, Value *LHS, Value *RHS) {
-		return c.B.CreateSDiv(LHS, RHS);
-	};
-	BinOpFn objFn = [](Compiler::Context &c, Value *LHS, Value *RHS) {
-		return compileSmallInt(c, 42);
-	};
-	return compileBinaryOp(c, LHS, RHS, intFn, "mysoreScriptDiv");
+	return compileBinaryOp(c, LHS, RHS, Instruction::SDiv, "mysoreScriptDiv");
 }
