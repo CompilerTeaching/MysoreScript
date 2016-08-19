@@ -2,6 +2,7 @@
 #include "runtime.hh"
 #include "interpreter.hh"
 #include <unordered_set>
+#include <functional>
 
 namespace Compiler
 {
@@ -207,7 +208,7 @@ namespace AST
 	/**
 	 * Abstract superclass for binary operators.
 	 */
-	struct BinOp : public Expression
+	struct BinOpBase : public Expression
 	{
 		/**
 		 * The left-hand side of the operation.
@@ -258,11 +259,6 @@ namespace AST
 			                    rhs->compileExpression(c));
 		}
 		/**
-		 * Evaluate (interpret) this expression, having already determined that
-		 * the two sides are integer values.
-		 */
-		virtual intptr_t evaluateWithIntegers(intptr_t lhs, intptr_t rhs) = 0;
-		/**
 		 * Return the method name that this operator expands to if the operands
 		 * are not small integers.
 		 */
@@ -278,19 +274,35 @@ namespace AST
 			lhs->collectVarUses(decls, uses);
 			rhs->collectVarUses(decls, uses);
 		}
+		/**
+		 * Evaluate (interpret) this expression, having already determined that
+		 * the two sides are integer values.
+		 */
+		virtual intptr_t evaluateWithIntegers(intptr_t lhs, intptr_t rhs) = 0;
+	};
+	/**
+	 * Template superclass for binary operators.  The template argument
+	 * provides the implementation of the function that handles the
+	 * small-integer implementation.
+	 */
+	template<class Op>
+	struct BinOp : public BinOpBase
+	{
+		/**
+		 * Evaluate (interpret) this expression, having already determined that
+		 * the two sides are integer values.
+		 */
+		intptr_t evaluateWithIntegers(intptr_t lhs, intptr_t rhs) override
+		{
+			Op o;
+			return o(lhs, rhs);
+		}
 	};
 	/**
 	 * Multiply operation.
 	 */
-	struct Multiply : public BinOp
+	struct Multiply : public BinOp<std::multiplies<intptr_t>>
 	{
-		/**
-		 * Evaluate on integer values by multiplying the two together.
-		 */
-		intptr_t evaluateWithIntegers(intptr_t lhs, intptr_t rhs) override
-		{
-			return lhs * rhs;
-		}
 		/**
 		 * Multiply operations become the `mul()` method invocations on
 		 * non-integer objects.
@@ -306,15 +318,8 @@ namespace AST
 	/**
 	 * Divide operation.
 	 */
-	struct Divide   : public BinOp
+	struct Divide   : public BinOp<std::divides<intptr_t>>
 	{
-		/**
-		 * Evaluate on integer values by dividing the left side by the right.
-		 */
-		intptr_t evaluateWithIntegers(intptr_t lhs, intptr_t rhs) override
-		{
-			return lhs / rhs;
-		}
 		/**
 		 * Divide operations become `div()` method invocations on non-integer
 		 * objects.
@@ -330,15 +335,8 @@ namespace AST
 	/**
 	 * Add expression.
 	 */
-	struct Add      : public BinOp
+	struct Add      : public BinOp<std::plus<intptr_t>>
 	{
-		/**
-		 * Evaluate on integer values by adding the two values.
-		 */
-		intptr_t evaluateWithIntegers(intptr_t lhs, intptr_t rhs) override
-		{
-			return lhs + rhs;
-		}
 		/**
 		 * Add operations become `add()` method invocations on non-integer
 		 * objects.
@@ -354,7 +352,7 @@ namespace AST
 	/**
 	 * Subtract expression.
 	 */
-	struct Subtract : public BinOp
+	struct Subtract : public BinOp<std::minus<intptr_t>>
 	{
 		/**
 		 * Evaluate on integer values by subtracting the right side from the
@@ -379,12 +377,13 @@ namespace AST
 	/**
 	 * Superclass for comparison operations.  
 	 */
-	struct Comparison : public BinOp
+	template<class T>
+	struct Comparison : public BinOp<T>
 	{
 		/**
 		 * All comparisons are (obviously) comparisons.
 		 */
-		virtual bool isComparison() override { return true; }
+		bool isComparison() override { return true; }
 		/**
 		 * Comparisons don't map to any method name.
 		 */
@@ -393,12 +392,8 @@ namespace AST
 	/**
 	 * Equality comparison.
 	 */
-	struct CmpEq    : public Comparison
+	struct CmpEq    : public Comparison<std::equal_to<intptr_t>>
 	{
-		intptr_t evaluateWithIntegers(intptr_t lhs, intptr_t rhs) override
-		{
-			return lhs == rhs;
-		}
 		llvm::Value *compileBinOp(Compiler::Context &c,
 		                          llvm::Value *LHS,
 		                          llvm::Value *RHS) override;
@@ -406,12 +401,8 @@ namespace AST
 	/**
 	 * Non-equality comparison.
 	 */
-	struct CmpNe    : public Comparison
+	struct CmpNe    : public Comparison<std::not_equal_to<intptr_t>>
 	{
-		intptr_t evaluateWithIntegers(intptr_t lhs, intptr_t rhs) override
-		{
-			return lhs != rhs;
-		}
 		llvm::Value *compileBinOp(Compiler::Context &c,
 		                          llvm::Value *LHS,
 		                          llvm::Value *RHS) override;
@@ -419,12 +410,8 @@ namespace AST
 	/**
 	 * Less-than comparison.
 	 */
-	struct CmpLt    : public Comparison
+	struct CmpLt    : public Comparison<std::less<intptr_t>>
 	{
-		intptr_t evaluateWithIntegers(intptr_t lhs, intptr_t rhs) override
-		{
-			return lhs < rhs;
-		}
 		llvm::Value *compileBinOp(Compiler::Context &c,
 		                          llvm::Value *LHS,
 		                          llvm::Value *RHS) override;
@@ -432,12 +419,8 @@ namespace AST
 	/**
 	 * Greater-than comparison.
 	 */
-	struct CmpGt    : public Comparison
+	struct CmpGt    : public Comparison<std::greater<intptr_t>>
 	{
-		intptr_t evaluateWithIntegers(intptr_t lhs, intptr_t rhs) override
-		{
-			return lhs > rhs;
-		}
 		llvm::Value *compileBinOp(Compiler::Context &c,
 		                          llvm::Value *LHS,
 		                          llvm::Value *RHS) override;
@@ -445,12 +428,8 @@ namespace AST
 	/**
 	 * Less-than-or-equal-to comparison.
 	 */
-	struct CmpLE    : public Comparison
+	struct CmpLE    : public Comparison<std::less_equal<intptr_t>>
 	{
-		intptr_t evaluateWithIntegers(intptr_t lhs, intptr_t rhs) override
-		{
-			return lhs <= rhs;
-		}
 		llvm::Value *compileBinOp(Compiler::Context &c,
 		                          llvm::Value *LHS,
 		                          llvm::Value *RHS) override;
@@ -458,12 +437,8 @@ namespace AST
 	/**
 	 * Greater-than-or-equal-to comparison.
 	 */
-	struct CmpGE    : public Comparison
+	struct CmpGE    : public Comparison<std::greater_equal<intptr_t>>
 	{
-		intptr_t evaluateWithIntegers(intptr_t lhs, intptr_t rhs) override
-		{
-			return lhs >= rhs;
-		}
 		llvm::Value *compileBinOp(Compiler::Context &c,
 		                          llvm::Value *LHS,
 		                          llvm::Value *RHS) override;

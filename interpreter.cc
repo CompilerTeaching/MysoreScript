@@ -659,7 +659,7 @@ void Assignment::interpret(Interpreter::Context &c)
 	c.setSymbol(target->name, expr->evaluate(c));
 }
 
-Obj BinOp::evaluateExpr(Interpreter::Context &c)
+Obj BinOpBase::evaluateExpr(Interpreter::Context &c)
 {
 	Obj LHS = lhs->evaluate(c);
 	Obj RHS = rhs->evaluate(c);
