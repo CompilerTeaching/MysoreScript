@@ -201,7 +201,7 @@ llvm::FunctionType *Compiler::Context::getClosureType(int bound, int args)
 CompiledMethod ClosureDecl::compileMethod(Class *cls,
                                           Interpreter::SymbolTable &globalSymbols)
 {
-	auto &params = parameters->arguments.objects();
+	auto &params = parameters->arguments;
 	Compiler::Context c(globalSymbols);
 	// Get the type of the method as an LLVM type
 	FunctionType *ClosureInvokeTy = c.getMethodType(cls->indexedIVarCount,
@@ -251,12 +251,12 @@ CompiledMethod ClosureDecl::compileMethod(Class *cls,
 	{
 		// Set the name of the stack slot.  This isn't necessary, but makes
 		// reading the generated IR a bit easier.
-		(*alloca)->setName(arg->name);
+		(*alloca)->setName(*arg.get());
 		// Store the argument in the stack slot.
 		c.B.CreateStore(&*(AI++), *alloca);
 		// Set this slot (specifically, the address of this stack allocation) to
 		// the address used when looking up the name of the argument.
-		c.symbols[arg->name] = *(alloca++);
+		c.symbols[*arg.get()] = *(alloca++);
 	}
 	alloca = localAllocas.begin();
 	// Now do almost the same thing for locals
@@ -306,7 +306,7 @@ CompiledMethod ClosureDecl::compileMethod(Class *cls,
 
 ClosureInvoke ClosureDecl::compileClosure(Interpreter::SymbolTable &globalSymbols)
 {
-	auto &params = parameters->arguments.objects();
+	auto &params = parameters->arguments;
 	Compiler::Context c(globalSymbols);
 	// Get the LLVM type of the closure invoke function
 	FunctionType *ClosureInvokeTy = c.getClosureType(boundVars.size(),
@@ -335,9 +335,9 @@ ClosureInvoke ClosureDecl::compileClosure(Interpreter::SymbolTable &globalSymbol
 	c.B.CreateStore(c.B.CreateBitCast(&*(AI++), c.ObjPtrTy), selfPtr);
 	for (auto &arg : params)
 	{
-		(*alloca)->setName(arg->name);
+		(*alloca)->setName(*arg.get());
 		c.B.CreateStore(&*(AI++), *alloca);
-		c.symbols[arg->name] = *(alloca++);
+		c.symbols[*arg.get()] = *(alloca++);
 	}
 	alloca = localAllocas.begin();
 	for (auto &local : decls)
@@ -378,7 +378,7 @@ Value *ClosureDecl::compileExpression(Compiler::Context &c)
 {
 	// Make sure that we know what the bound variables are.
 	check();
-	auto &params = parameters->arguments.objects();
+	auto &params = parameters->arguments;
 	// Get the type of the invoke function
 	FunctionType *invokeTy = c.getClosureType(boundVars.size(), params.size());
 	// Get the type of the first parameter (a pointer to the closure structure)
@@ -430,7 +430,7 @@ Value *ClosureDecl::compileExpression(Compiler::Context &c)
 			c.B.CreateStructGEP(boundVarsArrayTy, boundVarsArray, i++, var));
 	}
 	// Add this closure to our symbol table.
-	c.symbols[name->name] = closure;
+	c.symbols[name] = closure;
 	return closure;
 }
 Value *Call::compileExpression(Compiler::Context &c)
@@ -445,7 +445,7 @@ Value *Call::compileExpression(Compiler::Context &c)
 	// If this is a method invocation, then the next argument is the selector.
 	if (method)
 	{
-		Selector sel = lookupSelector(method->name);
+		Selector sel = lookupSelector(*method.get());
 		args.push_back(ConstantInt::get(c.SelTy, sel));
 	}
 	// Now add each of the explicit arguments.
@@ -604,27 +604,27 @@ void Decl::compile(Compiler::Context &c)
 	// closure, but we still want to initialise them at their first use.
 	if (init)
 	{
-		assert(c.symbols[name->name]);
+		assert(c.symbols[name]);
 		c.B.CreateStore(getAsObject(c, init->compileExpression(c)),
-				c.symbols[name->name]);
+				c.symbols[name]);
 	}
 }
 void Assignment::compile(Compiler::Context &c)
 {
-	assert(c.symbols[target->name->name]);
+	assert(c.symbols[target->name]);
 	// Store the result of the expression in the address of the named variable.
 	c.B.CreateStore(getAsObject(c, expr->compileExpression(c)),
-			c.symbols[target->name->name]);
+			c.symbols[target->name]);
 }
 
 Value *VarRef::compileExpression(Compiler::Context &c)
 {
-	return c.B.CreateLoad(c.lookupSymbolAddr(name->name));
+	return c.B.CreateLoad(c.lookupSymbolAddr(name));
 }
 Value *NewExpr::compileExpression(Compiler::Context &c)
 {
 	// Look up the class statically
-	Class *cls = lookupClass(className->name);
+	Class *cls = lookupClass(className);
 	// Create a value corresponding to the class pointer
 	Value *clsPtr = staticAddress(c, cls, c.ObjPtrTy);
 	// Look up the function that creates instances of objects

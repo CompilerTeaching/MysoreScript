@@ -436,7 +436,7 @@ Obj Call::evaluateExpr(Interpreter::Context &c)
 		return callCompiledClosure(closure->invoke, closure, args, i);
 	}
 	// Look up the selector and method to call
-	Selector sel = lookupSelector(method->name);
+	Selector sel = lookupSelector(*method.get());
 	assert(sel);
 	CompiledMethod mth = compiledMethodForSelector(obj, sel);
 	assert(mth);
@@ -448,7 +448,7 @@ Obj VarRef::evaluateExpr(Interpreter::Context &c)
 {
 	// Get the address of the variable corresponding to this symbol and then
 	// load the object stored there.
-	return *c.lookupSymbol(name->name);
+	return *c.lookupSymbol(name);
 }
 
 void ClosureDecl::check()
@@ -462,9 +462,9 @@ void ClosureDecl::check()
 	// by statements in this closure.
 	body->collectVarUses(decls, boundVars);
 	// Parameters are not bound variables, they're explicitly passed in.
-	for (auto &param : parameters->arguments.objects())
+	for (auto &param : parameters->arguments)
 	{
-		boundVars.erase(param->name);
+		boundVars.erase(*param.get());
 	}
 	// Variables that are declared in this function are also not bound
 	// variables.
@@ -483,7 +483,7 @@ void ClosureDecl::collectVarUses(std::unordered_set<std::string> &decls,
 	// Add any bound variables to the use list
 	uses.insert(boundVars.begin(), boundVars.end());
 	// Add the name of this closure to the declared list in the enclosing scope.
-	decls.insert(name->name);
+	decls.insert(name);
 }
 
 Obj ClosureDecl::evaluateExpr(Interpreter::Context &c)
@@ -500,12 +500,12 @@ Obj ClosureDecl::evaluateExpr(Interpreter::Context &c)
 	// Set up the class pointer
 	C->isa = &ClosureClass;
 	// Set up the parameter count
-	size_t params = parameters->arguments.objects().size();
+	size_t params = parameters->arguments.size();
 	C->parameters = createSmallInteger(params);
 	C->AST = this;
 	C->invoke = compiledClosure ? compiledClosure :
 		Interpreter::closureTrampolines[params];
-	c.setSymbol(name->name, reinterpret_cast<Obj>(C));
+	c.setSymbol(name, reinterpret_cast<Obj>(C));
 	int i=0;
 	// Copy bound variables into the closure.
 	for (auto &var : boundVars)
@@ -531,7 +531,7 @@ Obj ClosureDecl::interpretMethod(Interpreter::Context &c, Method *mth, Obj self,
 	if (compiledClosure)
 	{
 		return callCompiledMethod(reinterpret_cast<CompiledMethod>(compiledClosure),
-			self, sel, args, parameters->arguments.objects().size());
+			self, sel, args, parameters->arguments.size());
 	}
 	// Create a new symbol table for this method.
 	Interpreter::SymbolTable closureSymbols;
@@ -540,7 +540,7 @@ Obj ClosureDecl::interpretMethod(Interpreter::Context &c, Method *mth, Obj self,
 	size_t i=0;
 	for (auto &param : parameters->arguments)
 	{
-		c.setSymbol(param->name, &args[i++]);
+		c.setSymbol(*param.get(), &args[i++]);
 	}
 	Obj cmdObj = createSmallInteger(sel);
 	// Add self and cmd (receiver and selector) to the symbol table
@@ -582,7 +582,7 @@ Obj ClosureDecl::interpretClosure(Interpreter::Context &c, Closure *self,
 	if (compiledClosure)
 	{
 		return callCompiledClosure(compiledClosure, self, args,
-				parameters->arguments.objects().size());
+				parameters->arguments.size());
 	}
 	// Create a new symbol table for this closure
 	Interpreter::SymbolTable closureSymbols;
@@ -592,7 +592,7 @@ Obj ClosureDecl::interpretClosure(Interpreter::Context &c, Closure *self,
 	for (auto &param : parameters->arguments)
 	{
 		// Parameters are referenced from the arguments array
-		c.setSymbol(param->name, &args[i++]);
+		c.setSymbol(*param.get(), &args[i++]);
 	}
 	i = 0;
 	for (auto &bound : boundVars)
@@ -617,14 +617,14 @@ Obj ClosureDecl::interpretClosure(Interpreter::Context &c, Closure *self,
 Obj StringLiteral::evaluateExpr(Interpreter::Context &c)
 {
 	// Construct a string object.
-	String *str = gcAlloc<String>(value.size());
+	String *str = gcAlloc<String>(size());
 	assert(str != nullptr);
 	// Set the class pointer
 	str->isa = &StringClass;
 	// Set the length (as a small integer)
-	str->length = MysoreScript::createSmallInteger(value.size());
+	str->length = MysoreScript::createSmallInteger(size());
 	// Copy the characters into the object
-	value.copy(str->characters, value.size(), 0);
+	copy(str->characters, size(), 0);
 	return reinterpret_cast<Obj>(str);
 }
 
@@ -651,12 +651,12 @@ void Decl::interpret(Interpreter::Context &c)
 	{
 		v = init->evaluate(c);
 	}
-	c.setSymbol(name->name, v);
+	c.setSymbol(name, v);
 }
 
 void Assignment::interpret(Interpreter::Context &c)
 {
-	c.setSymbol(target->name->name, expr->evaluate(c));
+	c.setSymbol(target->name, expr->evaluate(c));
 }
 
 Obj BinOp::evaluateExpr(Interpreter::Context &c)
@@ -696,8 +696,8 @@ void ClassDecl::interpret(Interpreter::Context &c)
 	Class *cls = new Class();
 	// Due to the way automatic AST construction works, we'll end up with the
 	// class name in the superclass name field if we don't have a superclass.
-	std::string &clsName = name ? name->name : superclassName->name;
-	cls->superclass = name ? lookupClass(superclassName->name) : nullptr;
+	std::string &clsName = name ? *name : superclassName;
+	cls->superclass = name ? lookupClass(superclassName) : nullptr;
 	cls->className = strdup(clsName.c_str());
 	cls->methodCount = methods.size();
 	if (cls->superclass)
@@ -711,7 +711,7 @@ void ClassDecl::interpret(Interpreter::Context &c)
 	Method *method = cls->methodList;
 	for (auto &m : methods)
 	{
-		method->selector = lookupSelector(m->name->name);
+		method->selector = lookupSelector(m->name);
 		method->args = m->parameters->arguments.size();
 		// Currently, we only have trampolines for up to 10 arguments.  We could
 		// reuse some of the JIT code to generate new ones at run time if
@@ -738,7 +738,7 @@ void ClassDecl::interpret(Interpreter::Context &c)
 	}
 	for (auto &i : ivars)
 	{
-		*(ivar++) = strdup(i->name->name.c_str());
+		*(ivar++) = strdup(i->name.c_str());
 	}
 	// Add the class to the class table.
 	registerClass(clsName, cls);
@@ -746,6 +746,6 @@ void ClassDecl::interpret(Interpreter::Context &c)
 Obj NewExpr::evaluateExpr(Interpreter::Context &c)
 {
 	// Look up the class in the class table and create a new instance of it.
-	return newObject(lookupClass(className->name));
+	return newObject(lookupClass(className));
 }
 

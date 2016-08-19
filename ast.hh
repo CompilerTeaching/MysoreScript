@@ -16,7 +16,9 @@ namespace llvm
 namespace AST 
 {
 	using pegmatite::ASTPtr;
+	using pegmatite::ASTChild;
 	using pegmatite::ASTList;
+	using pegmatite::ErrorReporter;
 	using MysoreScript::Obj;
 
 	/**
@@ -128,10 +130,11 @@ namespace AST
 		 * Constructs the class from the source range.  Numbers are terminals,
 		 * so this will construct the numeric value from the text.
 		 */
-		void construct(const pegmatite::InputRange &r,
-		               pegmatite::ASTStack &st) override
+		bool construct(const pegmatite::InputRange &r,
+		               pegmatite::ASTStack &st, const ErrorReporter&) override
 		{
 			pegmatite::constructValue(r, value);
+			return true;
 		}
 		/**
 		 * All literals are constant expressions.
@@ -163,22 +166,21 @@ namespace AST
 	 * A string literal.  MysoreScript strings are instances of the String
 	 * class.
 	 */
-	struct StringLiteral : public Expression
+	struct StringLiteral : public Expression, pegmatite::ASTString
 	{
 		/**
 		 * Construct the string from the source text.
 		 */
-		void construct(const pegmatite::InputRange &r,
-		               pegmatite::ASTStack &st) override
+		bool construct(const pegmatite::InputRange &r,
+		               pegmatite::ASTStack &st, const ErrorReporter &er) override
 		{
-			std::stringstream stream;
-			for_each(r.begin(), r.end(), [&](char c) {stream << c;});
-			value = stream.str();
+			pegmatite::ASTString::construct(r, st, er);
 			std::string::size_type newline;
-			while ((newline = value.find("\\n")) != std::string::npos)
+			while ((newline = find("\\n")) != std::string::npos)
 			{
-				value.replace(newline, 2, "\n");
+				replace(newline, 2, "\n");
 			}
+			return true;
 		}
 		/**
 		 * Literals are constant expressions.
@@ -201,11 +203,6 @@ namespace AST
 		{
 			return;
 		}
-		private:
-		/**
-		 * The value of the string.
-		 */
-		std::string value;
 	};
 	/**
 	 * Abstract superclass for binary operators.
@@ -476,21 +473,7 @@ namespace AST
 	 * right, but are terminals that refer  to any identifier in the source
 	 * code.  
 	 */
-	struct Identifier : public pegmatite::ASTNode
-	{
-		/**
-		 * The string value of the identifier.
-		 */
-		std::string name;
-		/**
-		 * Construct the string value from the input range in the source.
-		 */
-		void construct(const pegmatite::InputRange &r,
-		               pegmatite::ASTStack &st) override
-		{
-			pegmatite::constructValue(r, name);
-		}
-	};
+	struct Identifier : public pegmatite::ASTString { };
 	/**
 	 * A parameter list for a closure declaration.  This contains list of
 	 * identifiers, one for each parameters.
@@ -517,7 +500,7 @@ namespace AST
 		/**
 		 * The name of this closure.
 		 */
-		ASTPtr<Identifier> name;
+		ASTChild<Identifier> name;
 		/**
 		 * The parameter list.
 		 */
@@ -620,14 +603,14 @@ namespace AST
 		/**
 		 * The name of the referenced variable.
 		 */
-		ASTPtr<Identifier> name;
+		ASTChild<Identifier> name;
 		/**
 		 * Add this variable to the set of referenced variables.
 		 */
 		void collectVarUses(std::unordered_set<std::string> &decls,
 		                    std::unordered_set<std::string> &uses) override
 		{
-			uses.insert(name->name);
+			uses.insert(name);
 		}
 		protected:
 		/**
@@ -734,7 +717,7 @@ namespace AST
 		/**
 		 * The name of the variable.
 		 */
-		ASTPtr<Identifier> name;
+		ASTChild<Identifier> name;
 		/**
 		 * The initialiser for this variable, if there is one.
 		 */
@@ -753,7 +736,7 @@ namespace AST
 		void collectVarUses(std::unordered_set<std::string> &decls,
 		                    std::unordered_set<std::string> &uses) override
 		{
-			decls.insert(name->name);
+			decls.insert(name);
 		}
 	};
 	/**
@@ -867,7 +850,7 @@ namespace AST
 		/**
 		 * The superclass name (or class name if there is no superclass).
 		 */
-		ASTPtr<Identifier> superclassName;
+		ASTChild<Identifier> superclassName;
 		/**
 		 * The instance variables declared in this class.
 		 */
@@ -897,7 +880,7 @@ namespace AST
 		/**
 		 * The name of the class being instantiated.
 		 */
-		ASTPtr<Identifier> className;
+		ASTChild<Identifier> className;
 		/**
 		 * Construct a new instance of the class in the interpreter.
 		 */
