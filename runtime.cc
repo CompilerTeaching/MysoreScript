@@ -672,7 +672,7 @@ CompiledMethod compiledMethodForSelector(Obj obj, Selector sel)
 	// Objective-C model of always returning null here.
 	if (!obj)
 	{
-		return (CompiledMethod)invalidMethod;
+		return reinterpret_cast<CompiledMethod>(invalidMethod);
 	}
 	// If it's a small integer, then use the small integer class, otherwise
 	// follow the class pointer.
@@ -682,7 +682,7 @@ CompiledMethod compiledMethodForSelector(Obj obj, Selector sel)
 	// otherwise return the function that we've just looked up.
 	if (!mth)
 	{
-		return (CompiledMethod)invalidMethod;
+		return reinterpret_cast<CompiledMethod>(invalidMethod);
 	}
 	return mth->function;
 }

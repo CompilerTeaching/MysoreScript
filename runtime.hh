@@ -18,7 +18,7 @@ template<typename T>
 T* gcAlloc(size_t extraBytes=0)
 {
 	size_t size = sizeof(T) + extraBytes;
-	return (T*)GC_MALLOC(size);
+	return reinterpret_cast<T*>(GC_MALLOC(size));
 }
 }
 namespace AST
@@ -42,7 +42,7 @@ typedef Object* Obj;
  */
 inline bool isInteger(Obj o)
 {
-	return ((intptr_t)o & 7) == 1;
+	return (reinterpret_cast<intptr_t>(o) & 7) == 1;
 }
 /**
  * Assuming that `o` is a small integer (an integer embedded in a pointer),
@@ -51,7 +51,7 @@ inline bool isInteger(Obj o)
 inline intptr_t getInteger(Obj o)
 {
 	assert(isInteger(o));
-	return (intptr_t)o >> 3;
+	return reinterpret_cast<intptr_t>(o) >> 3;
 }
 /**
  * Construct a small integer object from the given integer.
@@ -60,7 +60,7 @@ inline Obj createSmallInteger(intptr_t i)
 {
 	// Small integers are 61-bits, assert that we won't overflow.
 	assert((i<<3)>>3 == i);
-	return (Obj)((i << 3) | 1);
+	return reinterpret_cast<Obj>(((i << 3) | 1));
 }
 
 /**

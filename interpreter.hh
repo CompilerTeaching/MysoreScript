@@ -56,13 +56,13 @@ namespace Interpreter
 		/**
 		 * Copy constructor.
 		 */
-		Value(Value &o) : object(nullptr) { set((Obj)o); }
+		Value(Value &o) : object(nullptr) { set(static_cast<Obj>(o)); }
 		/**
 		 * Move constructor.
 		 */
 		Value(Value &&o) : object(nullptr)
 		{
-			set((Obj)o);
+			set(static_cast<Obj>(o));
 			o.set(nullptr);
 		}
 		/**
@@ -70,7 +70,7 @@ namespace Interpreter
 		 */
 		~Value();
 		void operator=(Obj o) { set(o); }
-		void operator=(Value &o) { set((Obj)o); }
+		void operator=(Value &o) { set(static_cast<Obj>(o)); }
 		operator Obj()
 		{
 			return object;
@@ -80,7 +80,7 @@ namespace Interpreter
 		 */
 		bool isInteger()
 		{
-			return (((intptr_t)object) & 7) == 1;
+			return ((reinterpret_cast<intptr_t>(object)) & 7) == 1;
 		}
 		/**
 		 * Returns the integer value of this object, if it is a small integer.
@@ -88,7 +88,7 @@ namespace Interpreter
 		int getIntValue()
 		{
 			assert(isInteger());
-			return (intptr_t)object >> 3;
+			return reinterpret_cast<intptr_t>(object) >> 3;
 		}
 	};
 	/**

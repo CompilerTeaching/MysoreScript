@@ -148,7 +148,7 @@ namespace AST
 		 */
 		Obj evaluateExpr(Interpreter::Context &c) override
 		{
-			return (Obj)((value << 3) | 1);
+			return reinterpret_cast<Obj>((value << 3) | 1);
 		}
 		/**
 		 * Compile the expression, returning an LLVM constant integer.
