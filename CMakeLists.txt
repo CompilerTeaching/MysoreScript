@@ -20,7 +20,16 @@ set(LLVM_LIBS
 add_executable(mysorescript ${mysorescript_CXX_SRCS})
 # We're using pegmatite in the RTTI mode
 add_definitions(-DUSE_RTTI=1)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-zero-length-array")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+	set(CLANG_FLAGS "-Wweak-vtables -Wdeprecated -Wold-style-cast -Wno-zero-length-array -Wno-unknown-attributes")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CLANG_FLAGS}")
+else()
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+endif()
+
+
 
 # Find the Boehm GC stuff
 include(FindPkgConfig)
