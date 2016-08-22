@@ -32,7 +32,7 @@ namespace AST
 		 */
 		virtual void interpret(Interpreter::Context &c) = 0;
 		/**
-		 * Compile this statement to LLVM IT.
+		 * Compile this statement to LLVM IR.
 		 */
 		virtual void compile(Compiler::Context &c) {}
 		/**
