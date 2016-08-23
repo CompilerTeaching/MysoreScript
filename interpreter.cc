@@ -678,6 +678,9 @@ Obj BinOpBase::evaluateExpr(Interpreter::Context &c)
 	}
 	Selector sel = lookupSelector(methodName());
 	CompiledMethod mth = compiledMethodForSelector(LHS, sel);
+	// If this method calls back into the interpreter, then we must be able to
+	// find the context.
+	currentContext = &c;
 	return (reinterpret_cast<Obj(*)(Obj,Selector,Obj)>(mth))(LHS, sel, RHS);
 }
 
