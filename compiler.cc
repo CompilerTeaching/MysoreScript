@@ -420,7 +420,7 @@ Value *ClosureDecl::compileExpression(Compiler::Context &c)
 		c.B.CreateStructGEP(closureTy, closure, 3));
 	// Get a pointer to the array of bound variables
 	Value *boundVarsArray = c.B.CreateStructGEP(closureTy, closure, 4);
-	Type *boundVarsArrayTy = closureTy->elements()[3];
+	Type *boundVarsArrayTy = closureTy->elements()[4];
 	int i=0;
 	for (auto &var : boundVars)
 	{
