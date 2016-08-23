@@ -232,6 +232,15 @@ Obj NumberDump(Obj str, Selector sel)
 	return nullptr;
 }
 /**
+ * The `.print()` method for `Number` objects.
+ */
+Obj NumberPrint(Obj str, Selector sel)
+{
+	std::cout << getInteger(str) << std::endl;
+	return nullptr;
+}
+
+/**
  * The `.dump()` method for `String` objects.
  */
 Obj StringDump(String *str, Selector sel)
@@ -239,7 +248,14 @@ Obj StringDump(String *str, Selector sel)
 	fwrite(str->characters, getInteger(str->length), 1, stderr);
 	return nullptr;
 }
-
+/**
+ * The `.dump()` method for `String` objects.
+ */
+Obj StringPrint(String *str, Selector sel)
+{
+	fwrite(str->characters, getInteger(str->length), 1, stdout);
+	return nullptr;
+}
 /**
  * The + method on a string, allocates a new string with the specified length.
  */
@@ -298,6 +314,7 @@ enum StaticSelectors
 	length = 1,
 	charAt,
 	dump,
+	print,
 	invoke,
 	atPut,
 	at,
@@ -321,6 +338,7 @@ const char *StaticSelectorNames[] =
 	"length",
 	"charAt",
 	"dump",
+	"print",
 	"invoke",
 	"atPut",
 	"at",
@@ -391,6 +409,12 @@ struct Method StringMethods[] =
 		nullptr
 	},
 	{
+		print,
+		0,
+		reinterpret_cast<CompiledMethod>(StringPrint),
+		nullptr
+	},
+	{
 		add,
 		1,
 		reinterpret_cast<CompiledMethod>(StringAdd),
@@ -412,6 +436,12 @@ struct Method NumberMethods[] =
 		dump,
 		0,
 		reinterpret_cast<CompiledMethod>(NumberDump),
+		nullptr
+	},
+	{
+		print,
+		0,
+		reinterpret_cast<CompiledMethod>(NumberPrint),
 		nullptr
 	}
 };
