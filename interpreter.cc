@@ -4,6 +4,9 @@
 using namespace AST;
 using namespace MysoreScript;
 
+bool Interpreter::forceCompiler = false;
+using Interpreter::forceCompiler;
+
 namespace {
 /**
  * Indicates whether a particular object needs to be visible to the GC.  If
@@ -522,7 +525,7 @@ Obj ClosureDecl::interpretMethod(Interpreter::Context &c, Method *mth, Obj self,
 	Class *cls = isInteger(self) ? &SmallIntClass : self->isa;
 	executionCount++;
 	// If we've interpreted this method enough times then try to compile it.
-	if (executionCount == compileThreshold)
+	if (forceCompiler || (executionCount == compileThreshold))
 	{
 		mth->function = compileMethod(cls, c.globalSymbols);
 		compiledClosure = reinterpret_cast<ClosureInvoke>(mth->function);
@@ -570,7 +573,7 @@ Obj ClosureDecl::interpretClosure(Interpreter::Context &c, Closure *self,
 {
 	executionCount++;
 	// If we've interpreted this enough times, compile it.
-	if (executionCount == compileThreshold)
+	if (forceCompiler || (executionCount == compileThreshold))
 	{
 		// Note that we don't pass any symbols other than the globals into the
 		// compiler, because all of the bound variables are already copied into

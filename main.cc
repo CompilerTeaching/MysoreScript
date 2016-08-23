@@ -57,6 +57,7 @@ void usage(const char *cmd)
 {
 	std::cerr << "usage: " << cmd << " [-himt] [-f {file name}]" << std::endl
 	          << " -h          Display this help" << std::endl
+	          << " -c          Force compilation" << std::endl
 	          << " -i          Interpreter, enable REPL mode" << std::endl
 	          << " -m          Display memory usage stats on exit" << std::endl
 	          << " -t          Display timing information" << std::endl
@@ -84,7 +85,7 @@ int main(int argc, char **argv)
 			          << ", column " << r.start.col;
 	};
 	// Parse the options that we understand
-	while ((c = getopt(argc, argv, "hmitf:")) != -1)
+	while ((c = getopt(argc, argv, "chmitf:")) != -1)
 	{
 		switch (c)
 		{
@@ -102,6 +103,9 @@ int main(int argc, char **argv)
 				break;
 			case 'h':
 				usage(argv[0]);
+				break;
+			case 'c':
+				Interpreter::forceCompiler = true;
 				break;
 		}
 	}

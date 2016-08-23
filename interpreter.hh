@@ -7,6 +7,12 @@
 
 namespace Interpreter
 {
+	/**
+	 * Force the compiler to run.  This overrides the compile threshold and
+	 * ensures that all methods and closures are compiled the first time that
+	 * they are invoked.
+	 */
+	extern bool forceCompiler;
 	using MysoreScript::Obj;
 	/**
 	 * Value wraps an object pointer.  It is responsible for informing the
