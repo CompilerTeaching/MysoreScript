@@ -23,7 +23,7 @@ add_definitions(-DUSE_RTTI=1)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-	set(CLANG_FLAGS "-Wweak-vtables -Wdeprecated -Wold-style-cast -Wno-zero-length-array -Wno-unknown-attributes")
+	set(CLANG_FLAGS "-Wdeprecated -Wno-zero-length-array -Wno-unknown-attributes")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CLANG_FLAGS}")
 else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
