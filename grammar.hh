@@ -23,9 +23,10 @@ struct MysoreScriptGrammar
 	 * Comments, including tracking newlines inside comments via the
 	 * whitespace rule.
 	 */
-	Rule comment     = "/*"_E >>
+	Rule comment     = ("/*"_E >>
 	                   (*(!ExprPtr("*/") >> (nl('\n') | any()))) >>
-	                   "*/";
+	                   "*/") |
+	                   "//"_E >> *(!(ExprPtr("\n")) >> any()) >> nl('\n');
 	/**
 	 * Rule for treating both comments and whitespace as ignored tokens.
 	 */
