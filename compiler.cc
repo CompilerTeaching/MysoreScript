@@ -287,7 +287,7 @@ CompiledMethod ClosureDecl::compileMethod(Class *cls,
 			// Now we do similar arithmetic on the array to get the address of
 			// each instance variable.
 			c.symbols[name] =
-				c.B.CreateStructGEP(iVarsArrayTy, iVarsArray, i++, name);
+				c.B.CreateStructGEP(iVarsArrayTy, iVarsArray, i, name);
 		}
 	}
 	// Compile the statements in the method.
