@@ -430,7 +430,7 @@ Value *ClosureDecl::compileExpression(Compiler::Context &c)
 			c.B.CreateStructGEP(boundVarsArrayTy, boundVarsArray, i++, var));
 	}
 	// Add this closure to our symbol table.
-	c.symbols[name] = closure;
+	c.B.CreateStore(closure, c.symbols[name]);
 	return closure;
 }
 Value *Call::compileExpression(Compiler::Context &c)
