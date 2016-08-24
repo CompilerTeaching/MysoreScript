@@ -75,6 +75,9 @@ exec_program(${LLVM_CONFIG}
 exec_program(${LLVM_CONFIG}
 	ARGS --libdir
 	OUTPUT_VARIABLE LLVM_LIBDIR)
+exec_program(${LLVM_CONFIG}
+	ARGS --bindir
+	OUTPUT_VARIABLE LLVM_BINDIR)
 string(REGEX REPLACE "([0-9]*).([0-9]*).*" "-DLLVM_MAJOR=\\1 -DLLVM_MINOR=\\2"  LLVM_VERSION "${LLVM_VER}")
 
 
