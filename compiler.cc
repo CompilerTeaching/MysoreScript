@@ -403,7 +403,7 @@ Value *ClosureDecl::compileExpression(Compiler::Context &c)
 	c.B.CreateStore(staticAddress(c, &ClosureClass, c.ObjPtrTy),
 			c.B.CreateStructGEP(closureTy, closure, 0));
 	// Set the parameters pointer to the number of parameters.
-	c.B.CreateStore(compileSmallInt(c, params.size()),
+	c.B.CreateStore(getAsObject(c, compileSmallInt(c, params.size())),
 			c.B.CreateStructGEP(closureTy, closure, 1));
 	// If we've already compiled the function for this closure, then insert a
 	// pointer to it into the closure, otherwise use the trampoline that calls
@@ -430,7 +430,7 @@ Value *ClosureDecl::compileExpression(Compiler::Context &c)
 			c.B.CreateStructGEP(boundVarsArrayTy, boundVarsArray, i++, var));
 	}
 	// Add this closure to our symbol table.
-	c.B.CreateStore(closure, c.symbols[name]);
+	c.B.CreateStore(c.B.CreateBitCast(closure, c.ObjPtrTy), c.symbols[name]);
 	return closure;
 }
 Value *Call::compileExpression(Compiler::Context &c)
