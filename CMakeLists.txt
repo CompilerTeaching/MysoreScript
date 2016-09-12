@@ -49,6 +49,15 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GC_CFLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GC_CFLAGS}")
 include_directories(GC_INCLUDE_DIRS)
 
+find_library(LIBEDIT libedit)
+if (${LIBEDIT} STREQUAL "LIBEDIT-NOTFOUND")
+	message(STATUS "libedit not found, using simple REPL")
+else()
+	message(STATUS "libedit found, enabling history in REPL")
+	add_definitions(-DHAVE_READLINE)
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ledit")
+endif()
+
 
 find_program(LLVM_CONFIG NAMES llvm-config DOC "Path to llvm-config utility")
 if (${LLVM_CONFIG} STREQUAL "LLVM_CONFIG-NOTFOUND")

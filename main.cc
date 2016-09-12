@@ -26,6 +26,8 @@
 #include <time.h>
 #include <unistd.h>
 #include <gc.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include "parser.hh"
 #include "interpreter.hh"
 
@@ -141,6 +143,10 @@ int main(int argc, char **argv)
 	// Keep all of the ASTs that we've parsed in the REPL environment in case
 	// anything is referencing them.
 	std::vector<std::unique_ptr<AST::Statements>> replASTs;
+#ifdef HAVE_READLINE
+	// Initialise libedit
+	rl_initialize();
+#endif
 	// As long as we're in REPL mode, read, evaluate and loop - we don't
 	// actually print the result, so technically this is REL...
 	while (repl)
@@ -148,6 +154,21 @@ int main(int argc, char **argv)
 		c1 = clock();
 		GC_gcollect();
 		logTimeSince(c1, "Garbage collection");
+#ifdef HAVE_READLINE
+		// Print the prompt and get a line.  Use a unique_ptr so that we don't
+		// have to worry about freeing the memory.
+		std::unique_ptr<char, decltype(free)*> line(readline("\nMysoreScript> "), free);
+		// If it was an empty line, exit REPL mode
+		if (line == nullptr || line.get()[0] == '\0')
+		{
+			break;
+		}
+		// Add this to the history.
+		add_history(line.get());
+		// Convert to a string so that the readline and non-readline codepaths
+		// are the same after this point.
+		std::string buffer(line.get());
+#else
 		std::string buffer;
 		// Print the prompt
 		std::cout << "\nMysoreScript> ";
@@ -158,6 +179,7 @@ int main(int argc, char **argv)
 		{
 			break;
 		}
+#endif
 		// Parse the line
 		pegmatite::StringInput input(std::move(buffer));
 		std::unique_ptr<AST::Statements> ast = 0;
