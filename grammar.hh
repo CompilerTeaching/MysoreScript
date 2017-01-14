@@ -115,7 +115,7 @@ struct MysoreScriptGrammar
 	/**
 	 * Strings any characters, enclosed in quotes.
 	 */
-	Rule string  = '"' >> string_body >> '"';
+	Rule string  = term('"' >> string_body >> '"');
 	/**
 	 * Letters - valid characters for the start of an identifier.
 	 */
