@@ -1,4 +1,5 @@
 #include <string.h>
+#include <iostream>
 #include "parser.hh"
 
 using namespace AST;
@@ -451,7 +452,13 @@ Obj VarRef::evaluateExpr(Interpreter::Context &c)
 {
 	// Get the address of the variable corresponding to this symbol and then
 	// load the object stored there.
-	return *c.lookupSymbol(name);
+	Obj *address = c.lookupSymbol(name);
+	if (address != nullptr)
+	{
+		return *address;
+	}
+	std::cerr << std::endl << "ERROR: " << name << " is not defined." << std::endl;
+	return nullptr;
 }
 
 void ClosureDecl::check()
