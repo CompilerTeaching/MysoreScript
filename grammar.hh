@@ -90,11 +90,11 @@ struct MysoreScriptGrammar
 	/**
 	 * Less-than-or-equal comparison.
 	 */
-	Rule le_cmp = arith_expr >> ">=" >> arith_expr;
+	Rule le_cmp = arith_expr >> "<=" >> arith_expr;
 	/**
 	 * Greater-than-or-equal comparison.
 	 */
-	Rule ge_cmp = arith_expr >> "<=" >> arith_expr;
+	Rule ge_cmp = arith_expr >> ">=" >> arith_expr;
 	/**
 	 * General rule for comparisons.  Matches one of the comparison types above.
 	 */
