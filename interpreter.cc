@@ -640,7 +640,7 @@ void IfStatement::interpret(Interpreter::Context &c)
 }
 void WhileLoop::interpret(Interpreter::Context &c)
 {
-	while ((reinterpret_cast<intptr_t>(condition->evaluate(c))) & ~7)
+	while (!c.isReturning && (reinterpret_cast<intptr_t>(condition->evaluate(c))) & ~7)
 	{
 		body->interpret(c);
 	}
