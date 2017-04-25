@@ -36,11 +36,9 @@ struct MysoreScriptGrammar
 	 */
 	ExprPtr digit = '0'_E - '9';
 	/**
-	 * Numbers are one or more digits, optionally followed by a decimal point,
-	 * and one or more digits, optionally followed by an exponent (which may
-	 * also be negative.
+	 * Numbers are one or more digits, optionally prefixed with its sign.
 	 */
-	Rule num    = +digit >> -('.'_E >> +digit >> -("eE"_S >> -("+-"_S) >> +digit));
+	Rule num    = -("+-"_S) >> +digit;
 	/**
 	 * Values are either numbers or expressions in brackets (highest precedence).
 	 */
