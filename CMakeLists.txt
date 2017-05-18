@@ -95,7 +95,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LLVM_CXXFLAGS} ${LLVM_VERSION}")
 target_link_libraries(mysorescript ${LLVM_LIBS_FLAGS})
 # llvm-config only gained a --system-libs flag in 3.5
 if (LLVM_VER VERSION_GREATER 3.4)
-	target_link_libraries(mysorescript ${LLVM_SYSTEMLIBS})
+string(STRIP ${LLVM_SYSTEMLIBS} LLVM_SYSTEMLIBS)
+	if ("x${LLVM_SYSTEMLIBS}" STREQUAL "x")
+	else()
+		target_link_libraries(mysorescript ${LLVM_SYSTEMLIBS})
+	endif()
 endif()
 set(CMAKE_EXE_LINKER_FLAGS "${LLVM_LDFLAGS} ${LIBGC} ${LIBEDIT} ${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,${LLVM_LIBDIR}")
 
