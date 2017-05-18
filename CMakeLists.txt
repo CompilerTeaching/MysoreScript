@@ -101,7 +101,7 @@ if (LLVM_VER VERSION_GREATER 3.4)
 		target_link_libraries(mysorescript ${LLVM_SYSTEMLIBS})
 	endif()
 endif()
-set(CMAKE_EXE_LINKER_FLAGS "${LLVM_LDFLAGS} ${LIBGC} ${LIBEDIT} ${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,${LLVM_LIBDIR}")
+set(CMAKE_EXE_LINKER_FLAGS "${LLVM_LDFLAGS} ${LIBGC} ${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,${LLVM_LIBDIR}")
 
 # Make sure that we use the LLVM path as an rpath so that we can dynamically
 # link to LLVM.  Don't let CMake specify its own rpath
