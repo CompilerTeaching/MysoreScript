@@ -49,13 +49,14 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GC_CFLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GC_CFLAGS}")
 include_directories(GC_INCLUDE_DIRS)
 
-find_library(LIBEDIT libedit)
-if (${LIBEDIT} STREQUAL "LIBEDIT-NOTFOUND")
-	message(STATUS "libedit not found, using simple REPL")
-else()
+pkg_check_modules(EDIT libedit)
+if (${EDIT_FOUND} EQUAL 1)
 	message(STATUS "libedit found, enabling history in REPL")
 	add_definitions(-DHAVE_READLINE)
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ledit")
+	include_directories(${EDIT_INCLUDE_DIRS})
+	find_library(LIBEDIT libedit PATHS ${EDIT_LIBRARY_DIRS})
+else()
+	message(STATUS "libedit not found, using simple REPL")
 endif()
 
 
@@ -96,7 +97,7 @@ target_link_libraries(mysorescript ${LLVM_LIBS_FLAGS})
 if (LLVM_VER VERSION_GREATER 3.4)
 	target_link_libraries(mysorescript ${LLVM_SYSTEMLIBS})
 endif()
-set(CMAKE_EXE_LINKER_FLAGS "${LLVM_LDFLAGS} ${LIBGC} ${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,${LLVM_LIBDIR}")
+set(CMAKE_EXE_LINKER_FLAGS "${LLVM_LDFLAGS} ${LIBGC} ${LIBEDIT} ${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,${LLVM_LIBDIR}")
 
 # Make sure that we use the LLVM path as an rpath so that we can dynamically
 # link to LLVM.  Don't let CMake specify its own rpath

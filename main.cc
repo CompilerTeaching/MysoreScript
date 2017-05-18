@@ -26,8 +26,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <gc.h>
-#include <readline/readline.h>
-#include <readline/history.h>
+#include <readline.h>
 #include "parser.hh"
 #include "interpreter.hh"
 
