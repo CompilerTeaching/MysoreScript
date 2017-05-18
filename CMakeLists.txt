@@ -47,7 +47,7 @@ endif ()
 message(STATUS "Using Boehm GC library: ${LIBGC}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GC_CFLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GC_CFLAGS}")
-include_directories(GC_INCLUDE_DIRS)
+include_directories(${GC_INCLUDE_DIRS})
 
 pkg_check_modules(EDIT libedit)
 if (${EDIT_FOUND} EQUAL 1)
