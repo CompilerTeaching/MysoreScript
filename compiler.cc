@@ -580,7 +580,7 @@ void WhileLoop::compile(Compiler::Context &c)
 	c.B.SetInsertPoint(cont);
 }
 
-Value *StringLiteral::compileExpression(Compiler::Context &c)
+Value *AST::StringLiteral::compileExpression(Compiler::Context &c)
 {
 	// If we don't have a cached string object for this literal, then poke the
 	// interpreter to generate one.
