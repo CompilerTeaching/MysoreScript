@@ -20,10 +20,10 @@ invoking the following methods:
 
 Operator | Method
 ---------|-------
-   +     |  add
-   -     |  sub
-   *     |  mul
-   /     |  div
+   `+`   |  add
+   `-`   |  sub
+   `*`   |  mul
+   `/`   |  div
 
 When used on values of the `Number` type, they have their conventional
 meanings.  
