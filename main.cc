@@ -26,7 +26,13 @@
 #include <time.h>
 #include <unistd.h>
 #include <gc.h>
-#include <readline.h>
+#ifdef HAVE_READLINE
+#  if __has_include(<readline.h>)
+#    include <readline.h>
+#  else
+#    undef HAVE_READLINE
+#  endif
+#endif
 #include "parser.hh"
 #include "interpreter.hh"
 
