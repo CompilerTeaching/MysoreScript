@@ -546,7 +546,7 @@ Obj ClosureDecl::interpretMethod(Interpreter::Context &c, Method *mth, Obj self,
 		c.setSymbol(*param.get(), &args[i++]);
 	}
 	i = 0;
-	Obj *locals = new Obj[decls.size()];
+	Obj *locals = gcAlloc<Obj>(decls.size() * sizeof(Obj));
 	for (auto &decl : decls)
 	{
 		// Ensure local variables have allocated storage, so that they're not
@@ -573,7 +573,6 @@ Obj ClosureDecl::interpretMethod(Interpreter::Context &c, Method *mth, Obj self,
 	c.isReturning = false;
 	// Pop the symbols off the symbol table (very important, as they reference
 	// our stack frame!)
-	delete[] locals;
 	c.popSymbols();
 	return retVal;
 }
@@ -613,7 +612,7 @@ Obj ClosureDecl::interpretClosure(Interpreter::Context &c, Closure *self,
 		c.setSymbol(bound, &self->boundVars[i++]);
 	}
 	i = 0;
-	Obj *locals = new Obj[decls.size()];
+	Obj *locals = gcAlloc<Obj>(decls.size() * sizeof(Obj));
 	for (auto &decl : decls)
 	{
 		// Ensure local variables have allocated storage, so that they're not
@@ -630,7 +629,6 @@ Obj ClosureDecl::interpretClosure(Interpreter::Context &c, Closure *self,
 	c.isReturning = false;
 	// Pop the symbols off the symbol table (very important, as they reference
 	// our stack frame!)
-	delete[] locals;
 	c.popSymbols();
 	return retVal;
 }
