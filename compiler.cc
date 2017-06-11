@@ -173,29 +173,31 @@ llvm::FunctionType *Compiler::Context::getMethodType(int ivars, int args)
 
 llvm::FunctionType *Compiler::Context::getClosureType(int bound, int args)
 {
-	PointerType *ClosureTy = ObjPtrTy;
-	if (bound)
-	{
-		SmallVector<Type*, 6> fields;
-		// isa (actually a class pointer not an object pointer)
-		fields.push_back(ObjPtrTy);
-		// Number of parameters
-		fields.push_back(ObjPtrTy);
-		// Invoke function.  We insert an explicit cast before we use this
-		// field, so we don't need to worry about it.
-		fields.push_back(ObjPtrTy);
-		// AST pointer
-		fields.push_back(ObjPtrTy);
-		// The array of bound variables.
-		fields.push_back(ArrayType::get(ObjPtrTy, bound));
-		ClosureTy = StructType::create(fields)->getPointerTo();
-	}
-	// Set up the argument types for the closure invoke function.
+	// Create an opaque structure type to use as the invoke parameter
+	auto *ClosureTy = StructType::create(C);
+	// Collect the parameter types.  We don't expect more than 10 parameters,
+	// so allocate any smaller number of types on the stack.
 	SmallVector<Type*, 10> paramTypes;
-	paramTypes.push_back(ClosureTy);
+	paramTypes.push_back(ClosureTy->getPointerTo());
 	// All parameters are objects.
 	paramTypes.insert(paramTypes.end(), args, ObjPtrTy);
-	return FunctionType::get(ObjPtrTy, paramTypes, false);
+	auto *invokeTy = FunctionType::get(ObjPtrTy, paramTypes, false);
+	SmallVector<Type*, 6> fields;
+	// isa (actually a class pointer not an object pointer)
+	fields.push_back(ObjPtrTy);
+	// Number of parameters
+	fields.push_back(ObjPtrTy);
+	// Invoke function.
+	fields.push_back(invokeTy->getPointerTo());
+	// AST pointer
+	fields.push_back(ObjPtrTy);
+	if (bound)
+	{
+		// The array of bound variables.
+		fields.push_back(ArrayType::get(ObjPtrTy, bound));
+	}
+	ClosureTy->setBody(fields);
+	return invokeTy;
 }
 
 CompiledMethod ClosureDecl::compileMethod(Class *cls,
@@ -381,6 +383,9 @@ Value *ClosureDecl::compileExpression(Compiler::Context &c)
 	auto &params = parameters->arguments;
 	// Get the type of the invoke function
 	FunctionType *invokeTy = c.getClosureType(boundVars.size(), params.size());
+	// Get a pointer to the invoke function type, which we will cast our
+	// function pointer to.
+	PointerType *invokePtrTy = invokeTy->getPointerTo();
 	// Get the type of the first parameter (a pointer to the closure structure)
 	PointerType *closurePtrTy = cast<PointerType>(invokeTy->getParamType(0));
 	// The type of the closure.
@@ -413,21 +418,26 @@ Value *ClosureDecl::compileExpression(Compiler::Context &c)
 	// expensive.
 	ClosureInvoke closureFn = compiledClosure ? compiledClosure :
 		Interpreter::closureTrampolines[params.size()];
-	c.B.CreateStore(staticAddress(c, closureFn, c.ObjPtrTy),
+	// Store the invoke pointer
+	c.B.CreateStore(
+		c.B.CreateBitCast(staticAddress(c, closureFn, c.ObjPtrTy), invokePtrTy),
 		c.B.CreateStructGEP(closureTy, closure, 2));
 	// Set the AST pointer
 	c.B.CreateStore(staticAddress(c, this, c.ObjPtrTy),
 		c.B.CreateStructGEP(closureTy, closure, 3));
-	// Get a pointer to the array of bound variables
-	Value *boundVarsArray = c.B.CreateStructGEP(closureTy, closure, 4);
-	Type *boundVarsArrayTy = closureTy->elements()[4];
-	int i=0;
-	for (auto &var : boundVars)
+	if (!boundVars.empty())
 	{
-		// Load each bound variable and then insert it into the closure at the
-		// correct index.
-		c.B.CreateStore(c.B.CreateLoad(c.lookupSymbolAddr(var)),
-			c.B.CreateStructGEP(boundVarsArrayTy, boundVarsArray, i++, var));
+		// Get a pointer to the array of bound variables
+		Value *boundVarsArray = c.B.CreateStructGEP(closureTy, closure, 4);
+		Type *boundVarsArrayTy = closureTy->elements()[4];
+		int i=0;
+		for (auto &var : boundVars)
+		{
+			// Load each bound variable and then insert it into the closure at the
+			// correct index.
+			c.B.CreateStore(c.B.CreateLoad(c.lookupSymbolAddr(var)),
+				c.B.CreateStructGEP(boundVarsArrayTy, boundVarsArray, i++, var));
+		}
 	}
 	// Add this closure to our symbol table.
 	c.B.CreateStore(c.B.CreateBitCast(closure, c.ObjPtrTy), c.symbols[name]);
@@ -459,16 +469,16 @@ Value *Call::compileExpression(Compiler::Context &c)
 	{
 		// Get the closure invoke type. 
 		FunctionType *invokeFnTy = c.getClosureType(0, args.size() - 1);
-		// The only field we care about in the closure is the invoke pointer,
-		// so define enough of the structure to get that (two pointers before
-		// it)
-		Type *Fields[3] =
-			{ c.ObjPtrTy, c.ObjPtrTy, invokeFnTy->getPointerTo() };
 		// Get the type of a pointer to the closure object 
-		Type *closureTy = StructType::create(Fields);
-		Type *closurePtrTy = closureTy->getPointerTo();
+		PointerType *closurePtrTy = cast<PointerType>(invokeFnTy->getParamType(0));
+		// Get the closure type.  Note: This will need to be changed once
+		// typeless pointers are here, so that `getClosureType` will return the
+		// struct type as well as the function type.
+		Type *closureTy = closurePtrTy->getElementType();
 		// Cast the called object to a closure
 		Value *closure = c.B.CreateBitCast(obj, closurePtrTy);
+		// Make sure that the closure argument is the correct type
+		args[0] = closure;
 		// Compute the address of the pointer to the closure invoke function
 		Value *invokeFn = c.B.CreateStructGEP(closureTy, closure, 2);
 		// Load the address of the invoke function
