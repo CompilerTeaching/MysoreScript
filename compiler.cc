@@ -122,7 +122,7 @@ ClosureInvoke Compiler::Context::compile()
 	FPM.run(*F);
 	MPM.run(*M);
 
-	// If you want to see the LLVM IR before optimisation, uncomment the
+	// If you want to see the LLVM IR after optimisation, uncomment the
 	// following line:
 	//M->dump();
 
