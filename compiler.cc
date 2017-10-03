@@ -397,7 +397,7 @@ Value *ClosureDecl::compileExpression(Compiler::Context &c)
 	// Insert the `GC_malloc` function (provided by libgc) into the module,
 	// bitcast to return a pointer to our closure type.
 	Constant *allocFn = c.M->getOrInsertFunction("GC_malloc", closurePtrTy,
-			c.ObjIntTy, nullptr);
+			c.ObjIntTy);
 	// Allocate GC'd memory for the closure.  Note that it would often be more
 	// efficient to do this on the stack, but only if we can either statically
 	// prove that the closure is not captured by anything that is called or if
@@ -491,7 +491,7 @@ Value *Call::compileExpression(Compiler::Context &c)
 	FunctionType *methodType = c.getMethodType(0, args.size() - 2);
 	// Get the lookup function
 	Constant *lookupFn = c.M->getOrInsertFunction("compiledMethodForSelector",
-			methodType->getPointerTo(), obj->getType(), c.SelTy, nullptr);
+			methodType->getPointerTo(), obj->getType(), c.SelTy);
 	// Insert the call to the function that performs the lookup.  This will
 	// always return *something* that we can call, even if it's just a function
 	// that reports an error.
@@ -639,7 +639,7 @@ Value *NewExpr::compileExpression(Compiler::Context &c)
 	Value *clsPtr = staticAddress(c, cls, c.ObjPtrTy);
 	// Look up the function that creates instances of objects
 	Constant *newFn = c.M->getOrInsertFunction("newObject", c.ObjPtrTy,
-			c.ObjPtrTy, nullptr);
+			c.ObjPtrTy);
 	// Call the function with the class pointer as the argument
 	return c.B.CreateCall(newFn, clsPtr, "new");
 }
@@ -716,7 +716,7 @@ Value *compileBinaryOp(Compiler::Context &c, Value *LHS, Value *RHS,
 	c.B.SetInsertPoint(obj);
 	// Call the function that handles the object case
 	Value *objResult = c.B.CreateCall(c.M->getOrInsertFunction(slowCallFnName,
-				c.ObjPtrTy, LHS->getType(), RHS->getType(), nullptr),
+				c.ObjPtrTy, LHS->getType(), RHS->getType()),
 			{LHS, RHS});
 	// And branch to the continuation block
 	c.B.CreateBr(cont);
