@@ -50,7 +50,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GC_CFLAGS}")
 include_directories(${GC_INCLUDE_DIRS})
 
 pkg_check_modules(EDIT libedit)
-if (${EDIT_FOUND} EQUAL 1)
+if ("${EDIT_FOUND}" EQUAL 1)
 	message(STATUS "libedit found, enabling history in REPL")
 	add_definitions(-DHAVE_READLINE)
 	include_directories(${EDIT_INCLUDE_DIRS})
