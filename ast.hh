@@ -722,7 +722,7 @@ namespace AST
 		/**
 		 * The expression that is returned.
 		 */
-		ASTPtr<Expression> expr;
+		ASTPtr<Expression, true/*optional*/> expr;
 		/**
 		 * Interpret the returned expression and then indicate in the context
 		 * that we have hit a return statement and so should stop interpreting.
@@ -738,7 +738,10 @@ namespace AST
 		void collectVarUses(std::unordered_set<std::string> &decls,
 		                    std::unordered_set<std::string> &uses) override
 		{
-			expr->collectVarUses(decls, uses);
+			if (expr != nullptr)
+			{
+				expr->collectVarUses(decls, uses);
+			}
 		}
 	};
 	/**

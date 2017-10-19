@@ -691,7 +691,7 @@ void Return::interpret(Interpreter::Context &c)
 {
 	// Evaluate the returned expression and then indicate in the interpreter
 	// context that we're returning.
-	c.retVal = expr->evaluate(c);
+	c.retVal = expr != nullptr ? expr->evaluate(c) : nullptr;
 	c.isReturning = true;
 }
 

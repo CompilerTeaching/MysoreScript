@@ -508,9 +508,16 @@ void Statements::compile(Compiler::Context &c)
 
 void Return::compile(Compiler::Context &c)
 {
-	// Insert a return instruction with the correct value
-	Value *ret = expr->compileExpression(c);
-	c.B.CreateRet(getAsObject(c, ret));
+	if (expr != nullptr)
+	{
+		// Insert a return instruction with the correct value
+		Value *ret = expr->compileExpression(c);
+		c.B.CreateRet(getAsObject(c, ret));
+	}
+	else
+	{
+		c.B.CreateRet(ConstantPointerNull::get(c.ObjPtrTy));
+	}
 	// Clear the insert point so nothing else tries to insert instructions after
 	// the basic block terminator
 	c.B.ClearInsertionPoint();

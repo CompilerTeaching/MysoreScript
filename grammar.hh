@@ -187,7 +187,7 @@ struct MysoreScriptGrammar
 	/**
 	 * A return statement.
 	 */
-	Rule ret          = "return"_E >> expression >> ';';
+	Rule ret          = "return"_E >> -expression >> ';';
 	/**
 	 * An if statement, with a condition in brackets followed by the body in
 	 * braces.
