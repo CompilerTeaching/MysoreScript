@@ -1,4 +1,5 @@
 #include <string.h>
+#include <iostream>
 #include "parser.hh"
 
 using namespace AST;
@@ -434,6 +435,11 @@ Obj Call::evaluateExpr(Interpreter::Context &c)
 	// If there's no method, then we're trying to invoke a closure.
 	if (!method)
 	{
+		if (obj == nullptr)
+		{
+			std::cerr << "ERROR: cannot call null closure." << std::endl;
+			return nullptr;
+		}
 		assert(obj->isa == &ClosureClass);
 		Closure *closure = reinterpret_cast<Closure*>(obj);
 		return callCompiledClosure(closure->invoke, closure, args, i);
