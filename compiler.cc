@@ -518,13 +518,16 @@ void Return::compile(Compiler::Context &c)
 
 void IfStatement::compile(Compiler::Context &c)
 {
+	bool hasElse = elseStatement != nullptr;
 	// Compute the condition
 	Value *cond = condition->compileExpression(c);
 	// Create the basic block that we'll branch to if the condition is false and
-	// after executing if the condition is true.
+	// there is no else statement, or after executing if the condition is true.
 	BasicBlock *cont = BasicBlock::Create(c.C, "if.cont", c.F);
 	// Create the block that contains the body of the if statement
 	BasicBlock *ifBody = BasicBlock::Create(c.C, "if.body", c.F);
+	// Create the block that contains the body of the else statement
+	BasicBlock *elseBody = hasElse ? BasicBlock::Create(c.C, "if.else", c.F) : nullptr;
 	// Cast the condition to a small int.  We aren't unconditionally
 	// interpreting it as a small int, we just want to be able to do some
 	// arithmetic on it...
@@ -538,7 +541,7 @@ void IfStatement::compile(Compiler::Context &c)
 	// Create a comparison with 0 that we can then branch on
 	cond = c.B.CreateIsNotNull(cond);
 	// Branch to the body if it's not 0, to the continuation block if it is
-	c.B.CreateCondBr(cond, ifBody, cont);
+	c.B.CreateCondBr(cond, ifBody, hasElse ? elseBody : cont);
 	// Compile the body of the if statement.
 	c.B.SetInsertPoint(ifBody);
 	body->compile(c);
@@ -548,8 +551,23 @@ void IfStatement::compile(Compiler::Context &c)
 	{
 		c.B.CreateBr(cont);
 	}
+	if (hasElse)
+	{
+		c.B.SetInsertPoint(elseBody);
+		elseStatement->compile(c);
+		if (c.B.GetInsertBlock() != nullptr)
+		{
+			c.B.CreateBr(cont);
+		}
+	}
 	// Continue from the end
 	c.B.SetInsertPoint(cont);
+}
+void ElseStatement::compile(Compiler::Context &c)
+{
+	// The logic relating to the else statement is handled by its if statement,
+	// so that the logic for branching is all kept in one place.
+	body->compile(c);
 }
 void WhileLoop::compile(Compiler::Context &c)
 {
