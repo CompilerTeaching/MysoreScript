@@ -122,7 +122,7 @@ struct MysoreScriptGrammar
 	 * Identifiers are a letter followed by zero or more alphanumeric
 	 * characters.
 	 */
-	Rule identifier   = term(letter >> *(letter | digit));
+	Rule identifier   = term((letter | '_') >> *(letter | digit | '_'));
 	/**
 	 * Argument list.  Zero or more comma-separated arguments, wrapped in
 	 * brackets.
