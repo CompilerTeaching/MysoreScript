@@ -119,10 +119,15 @@ struct MysoreScriptGrammar
 	 */
 	ExprPtr letter    = (('a'_E - 'z') | ('A'_E - 'Z'));
 	/**
+	 * A list of reserved keywords to prevent any of them being used as
+	 * identifiers and make attempting such a syntax error.
+	 */
+	Rule reserved = "func"_E | "new" | "var" | "return" | "else" | "if" | "while" | "class"; 
+	/**
 	 * Identifiers are a letter followed by zero or more alphanumeric
 	 * characters.
 	 */
-	Rule identifier   = term(letter >> *(letter | digit));
+	Rule identifier   = !reserved >> term(letter >> *(letter | digit));
 	/**
 	 * Argument list.  Zero or more comma-separated arguments, wrapped in
 	 * brackets.
