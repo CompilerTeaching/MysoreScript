@@ -638,6 +638,7 @@ Obj callCompiledMethod(CompiledMethod m, Obj receiver, Selector sel, Obj *args,
 	{
 		default:
 			assert(0 && "Too many arguments!");
+			std::cerr << "ERROR: cannot call a method with more than 10 arguments." << std::endl;
 			return nullptr;
 		case 0:
 			return (reinterpret_cast<Obj(*)(Obj, Selector)>(m))(receiver, sel);
@@ -650,8 +651,29 @@ Obj callCompiledMethod(CompiledMethod m, Obj receiver, Selector sel, Obj *args,
 			return (reinterpret_cast<Obj(*)(Obj, Selector, Obj, Obj, Obj)>(m))(receiver, sel,
 					args[0], args[1], args[2]);
 		case 4:
-			return (reinterpret_cast<Obj(*)(Obj, Selector, Obj, Obj, Obj, Obj)>(m))(receiver,
-					sel, args[0], args[1], args[2], args[3]);
+			return (reinterpret_cast<Obj(*)(Obj, Selector, Obj, Obj, Obj, Obj)>(m))(receiver, sel,
+					args[0], args[1], args[2], args[3]);
+		case 5:
+			return (reinterpret_cast<Obj(*)(Obj, Selector, Obj, Obj, Obj, Obj, Obj)>(m))(receiver,
+					sel, args[0], args[1], args[2], args[3], args[4]);
+		case 6:
+			return (reinterpret_cast<Obj(*)(Obj, Selector, Obj, Obj, Obj, Obj, Obj, Obj)>(m))(
+					receiver, sel, args[0], args[1], args[2], args[3], args[4], args[5]);
+		case 7:
+			return (reinterpret_cast<Obj(*)(Obj, Selector, Obj, Obj, Obj, Obj, Obj, Obj, Obj)>(m))(
+					receiver, sel, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+		case 8:
+			return (reinterpret_cast<Obj(*)(Obj, Selector, Obj, Obj, Obj, Obj, Obj, Obj, Obj, Obj)>
+					(m))(receiver, sel, args[0], args[1], args[2], args[3], args[4], args[5],
+					args[6], args[7]);
+		case 9:
+			return (reinterpret_cast<Obj(*)(Obj, Selector, Obj, Obj, Obj, Obj, Obj, Obj, Obj, Obj,
+					Obj)>(m))(receiver, sel, args[0], args[1], args[2], args[3], args[4], args[5],
+					args[6], args[7], args[8]);
+		case 10:
+			return (reinterpret_cast<Obj(*)(Obj, Selector, Obj, Obj, Obj, Obj, Obj, Obj, Obj, Obj,
+					Obj, Obj)>(m))(receiver, sel, args[0], args[1], args[2], args[3], args[4],
+					args[5], args[6], args[7], args[8], args[9]);
 	}
 }
 
@@ -662,6 +684,7 @@ Obj callCompiledClosure(ClosureInvoke m, Closure *receiver, Obj *args,
 	{
 		default:
 			assert(0 && "Too many arguments!");
+			std::cerr << "ERROR: cannot call a closure with more than 10 arguments." << std::endl;
 			return nullptr;
 		case 0:
 			return (reinterpret_cast<Obj(*)(Closure*)>(m))(receiver);
@@ -670,11 +693,32 @@ Obj callCompiledClosure(ClosureInvoke m, Closure *receiver, Obj *args,
 		case 2:
 			return (reinterpret_cast<Obj(*)(Closure*, Obj, Obj)>(m))(receiver, args[0], args[1]);
 		case 3:
-			return (reinterpret_cast<Obj(*)(Closure*, Obj, Obj, Obj)>(m))(receiver, args[0], args[1],
-					args[2]);
+			return (reinterpret_cast<Obj(*)(Closure*, Obj, Obj, Obj)>(m))(receiver, args[0],
+					args[1], args[2]);
 		case 4:
 			return (reinterpret_cast<Obj(*)(Closure*, Obj, Obj, Obj, Obj)>(m))(receiver, args[0],
 					args[1], args[2], args[3]);
+		case 5:
+			return (reinterpret_cast<Obj(*)(Closure*, Obj, Obj, Obj, Obj, Obj)>(m))(receiver,
+					args[0], args[1], args[2], args[3], args[4]);
+		case 6:
+			return (reinterpret_cast<Obj(*)(Closure*, Obj, Obj, Obj, Obj, Obj, Obj)>(m))(receiver,
+					args[0], args[1], args[2], args[3], args[4], args[5]);
+		case 7:
+			return (reinterpret_cast<Obj(*)(Closure*, Obj, Obj, Obj, Obj, Obj, Obj, Obj)>(m))(
+					receiver, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+		case 8:
+			return (reinterpret_cast<Obj(*)(Closure*, Obj, Obj, Obj, Obj, Obj, Obj, Obj, Obj)>(m))(
+					receiver, args[0], args[1], args[2], args[3], args[4], args[5], args[6],
+					args[7]);
+		case 9:
+			return (reinterpret_cast<Obj(*)(Closure*, Obj, Obj, Obj, Obj, Obj, Obj, Obj, Obj, Obj)>
+					(m))(receiver, args[0], args[1], args[2], args[3], args[4], args[5], args[6],
+					args[7], args[8]);
+		case 10:
+			return (reinterpret_cast<Obj(*)(Closure*, Obj, Obj, Obj, Obj, Obj, Obj, Obj, Obj, Obj,
+					Obj)>(m))(receiver, args[0], args[1], args[2], args[3], args[4], args[5],
+					args[6], args[7], args[8], args[9]);
 	}
 }
 
