@@ -122,7 +122,7 @@ ClosureInvoke Compiler::Context::compile()
 	FPM.run(*F);
 	MPM.run(*M);
 
-	// If you want to see the LLVM IR before optimisation, uncomment the
+	// If you want to see the LLVM IR after optimisation, uncomment the
 	// following line:
 	//M->dump();
 
@@ -760,11 +760,11 @@ Value *CmpLE::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
 }
 Value *Subtract::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
 {
-	return compileBinaryOp(c, LHS, RHS, Instruction::Sub, "mysoreScriptAdd");
+	return compileBinaryOp(c, LHS, RHS, Instruction::Sub, "mysoreScriptSub");
 }
 Value *Add::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
 {
-	return compileBinaryOp(c, LHS, RHS, Instruction::Add, "mysoreScriptSub");
+	return compileBinaryOp(c, LHS, RHS, Instruction::Add, "mysoreScriptAdd");
 }
 Value *Multiply::compileBinOp(Compiler::Context &c, Value *LHS, Value *RHS)
 {
