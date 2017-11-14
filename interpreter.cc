@@ -525,7 +525,6 @@ Obj ClosureDecl::evaluateExpr(Interpreter::Context &c)
 	// Copy bound variables into the closure.
 	for (auto &var : boundVars)
 	{
-		C->boundVars[i++] = *c.lookupSymbol(var);
 		Obj *address = c.lookupSymbol(var);
 		if (address != nullptr)
 		{
