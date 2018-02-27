@@ -51,7 +51,7 @@ static void logTimeSince(clock_t c1, const char *msg)
 	clock_t c2 = clock();
 	struct rusage r;
 	getrusage(RUSAGE_SELF, &r);
-	auto oldLocale = std::cerr.imbue(std::locale("en_GB.UTF-8"));
+	auto oldLocale = std::cerr.imbue(std::locale("C"));
 	std::cerr << msg << " took "
 	          << (static_cast<double>(c2) - static_cast<double>(c1)) / static_cast<double>(CLOCKS_PER_SEC)
 	          << " seconds.	Peak used " <<  r.ru_maxrss/1024 << "KB." << std::endl;
@@ -205,7 +205,7 @@ int main(int argc, char **argv)
 	// Print some memory usage stats, if requested.
 	if (memstats)
 	{
-		std::cerr.imbue(std::locale("en_GB.UTF-8"));
+		std::cerr.imbue(std::locale("C"));
 		std::cerr << "Allocated a total of " << GC_get_total_bytes()
 		          << " bytes during execution." << std::endl;
 		std::cerr << "GC heap size: " << GC_get_heap_size() << " bytes."

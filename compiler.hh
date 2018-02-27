@@ -81,4 +81,4 @@ namespace Compiler
 		 */
 		MysoreScript::ClosureInvoke compile();
 	};
-};
+}

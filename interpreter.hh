@@ -157,4 +157,4 @@ namespace Interpreter
 	 * Array of trampolines, indexed by number or arguments.  
 	 */
 	extern MysoreScript::ClosureInvoke closureTrampolines[];
-};
+}

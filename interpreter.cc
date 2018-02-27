@@ -23,250 +23,96 @@ Interpreter::Context *currentContext;
 
 using MysoreScript::Closure;
 /**
- * 0-argument trampoline for jumping back into the interpreter when a closure
+ * Trampolines for jumping back into the interpreter when a closure
  * that has not yet been compiled is executed.
  */
-Obj closureTrampoline0(Closure *C)
+template <class... Cls>
+Obj closureTrampolineVar(Closure *C, Cls... objs)
 {
-	return C->AST->interpretClosure(*currentContext, C, nullptr);
-}
-/**
- * 1-argument trampoline for jumping back into the interpreter when a closure
- * that has not yet been compiled is executed.
- */
-Obj closureTrampoline1(Closure *C, Obj o0)
-{
-	Obj args[] = { o0 };
-	return C->AST->interpretClosure(*currentContext, C, args);
-}
-/**
- * 2-argument trampoline for jumping back into the interpreter when a closure
- * that has not yet been compiled is executed.
- */
-Obj closureTrampoline2(Closure *C, Obj o0, Obj o1)
-{
-	Obj args[] = { o0, o1 };
-	return C->AST->interpretClosure(*currentContext, C, args);
-}
-/**
- * 3-argument trampoline for jumping back into the interpreter when a closure
- * that has not yet been compiled is executed.
- */
-Obj closureTrampoline3(Closure *C, Obj o0, Obj o1, Obj o2)
-{
-	Obj args[] = { o0, o1, o2 };
-	return C->AST->interpretClosure(*currentContext, C, args);
-}
-/**
- * 4-argument trampoline for jumping back into the interpreter when a closure
- * that has not yet been compiled is executed.
- */
-Obj closureTrampoline4(Closure *C, Obj o0, Obj o1, Obj o2, Obj o3)
-{
-	Obj args[] = { o0, o1, o2, o3 };
-	return C->AST->interpretClosure(*currentContext, C, args);
-}
-/**
- * 5-argument trampoline for jumping back into the interpreter when a closure
- * that has not yet been compiled is executed.
- */
-Obj closureTrampoline5(Closure *C, Obj o0, Obj o1, Obj o2, Obj o3, Obj o4)
-{
-	Obj args[] = { o0, o1, o2, o3, o4 };
-	return C->AST->interpretClosure(*currentContext, C, args);
-}
-/**
- * 6-argument trampoline for jumping back into the interpreter when a closure
- * that has not yet been compiled is executed.
- */
-Obj closureTrampoline6(Closure *C, Obj o0, Obj o1, Obj o2, Obj o3, Obj o4,
-		Obj o5)
-{
-	Obj args[] = { o0, o1, o2, o3, o4, o5 };
-	return C->AST->interpretClosure(*currentContext, C, args);
-}
-/**
- * 7-argument trampoline for jumping back into the interpreter when a closure
- * that has not yet been compiled is executed.
- */
-Obj closureTrampoline7(Closure *C, Obj o0, Obj o1, Obj o2, Obj o3, Obj o4,
-		Obj o5, Obj o6)
-{
-	Obj args[] = { o0, o1, o2, o3, o4, o5, o6 };
-	return C->AST->interpretClosure(*currentContext, C, args);
-}
-/**
- * 8-argument trampoline for jumping back into the interpreter when a closure
- * that has not yet been compiled is executed.
- */
-Obj closureTrampoline8(Closure *C, Obj o0, Obj o1, Obj o2, Obj o3, Obj o4,
-		Obj o5, Obj o6, Obj o7)
-{
-	Obj args[] = { o0, o1, o2, o3, o4, o5, o6, o7 };
-	return C->AST->interpretClosure(*currentContext, C, args);
-}
-/**
- * 9-argument trampoline for jumping back into the interpreter when a closure
- * that has not yet been compiled is executed.
- */
-Obj closureTrampoline9(Closure *C, Obj o0, Obj o1, Obj o2, Obj o3, Obj o4,
-		Obj o5, Obj o6, Obj o7, Obj o8)
-{
-	Obj args[] = { o0, o1, o2, o3, o4, o5, o6, o7, o8 };
-	return C->AST->interpretClosure(*currentContext, C, args);
-}
-/**
- * 10-argument trampoline for jumping back into the interpreter when a closure
- * that has not yet been compiled is executed.
- */
-Obj closureTrampoline10(Closure *C, Obj o0, Obj o1, Obj o2, Obj o3, Obj o4,
-		Obj o5, Obj o6, Obj o7, Obj o8, Obj o9)
-{
-	Obj args[] = { o0, o1, o2, o3, o4, o5, o6, o7, o8, o9 };
+	Obj args[] = { objs... };
 	return C->AST->interpretClosure(*currentContext, C, args);
 }
 
+template <>
+Obj closureTrampolineVar(Closure *C)
+{
+	return C->AST->interpretClosure(*currentContext, C, nullptr);
+}
+
 /**
- * 0-argument trampoline for jumping back into the interpreter when a method
+ * Trampolines for jumping back into the interpreter when a method
  * that has not yet been compiled is executed.
  */
-Obj methodTrampoline0(Obj self, Selector cmd)
+template <class... Cls>
+Obj methodTrampolineVar(Obj self, Selector cmd, Cls... objs)
+{
+	Obj args[] = { objs... };
+	Class *cls = isInteger(self) ? &SmallIntClass : self->isa;
+	Method *mth = methodForSelector(cls, cmd);
+	return mth->AST->interpretMethod(*currentContext, mth, self, cmd, args);
+}
+
+template <>
+Obj methodTrampolineVar(Obj self, Selector cmd)
 {
 	Class *cls = isInteger(self) ? &SmallIntClass : self->isa;
 	Method *mth = methodForSelector(cls, cmd);
 	return mth->AST->interpretMethod(*currentContext, mth, self, cmd, nullptr);
 }
-/**
- * 1-argument trampoline for jumping back into the interpreter when a method
- * that has not yet been compiled is executed.
- */
-Obj methodTrampoline1(Obj self, Selector cmd, Obj o0)
+
+template<size_t ...>
+struct seq { };
+
+template<size_t N, size_t ...S>
+struct gens : gens<N-1, N-1, S...> { };
+
+template<size_t ...S>
+struct gens<0, S...> {
+	typedef seq<S...> type;
+};
+
+
+template <size_t ...I>
+ClosureInvoke getClosureTrampolineNImpl(seq<I...>)
 {
-	Obj args[] = { o0 };
-	Class *cls = isInteger(self) ? &SmallIntClass : self->isa;
-	Method *mth = methodForSelector(cls, cmd);
-	return mth->AST->interpretMethod(*currentContext, mth, self, cmd, args);
+	static auto unused = [](size_t v) { return v; };
+	return reinterpret_cast<ClosureInvoke>(closureTrampolineVar<decltype((unused(I),Obj{}))...>);
 }
-/**
- * 2-argument trampoline for jumping back into the interpreter when a method
- * that has not yet been compiled is executed.
- */
-Obj methodTrampoline2(Obj self, Selector cmd, Obj o0, Obj o1)
+
+template <size_t N>
+ClosureInvoke getClosureTrampolineN()
 {
-	Obj args[] = { o0, o1 };
-	Class *cls = isInteger(self) ? &SmallIntClass : self->isa;
-	Method *mth = methodForSelector(cls, cmd);
-	return mth->AST->interpretMethod(*currentContext, mth, self, cmd, args);
+	return getClosureTrampolineNImpl(typename gens<N>::type{});
 }
-/**
- * 3-argument trampoline for jumping back into the interpreter when a method
- * that has not yet been compiled is executed.
- */
-Obj methodTrampoline3(Obj self, Selector cmd, Obj o0, Obj o1, Obj o2)
+
+template <size_t ...I>
+CompiledMethod getMethodTrampolineNImpl(seq<I...>)
 {
-	Obj args[] = { o0, o1, o2 };
-	Class *cls = isInteger(self) ? &SmallIntClass : self->isa;
-	Method *mth = methodForSelector(cls, cmd);
-	return mth->AST->interpretMethod(*currentContext, mth, self, cmd, args);
+	static auto unused = [](size_t v) { return v; };
+	return reinterpret_cast<CompiledMethod>(methodTrampolineVar<decltype((unused(I),Obj{}))...>);
 }
-/**
- * 4-argument trampoline for jumping back into the interpreter when a method
- * that has not yet been compiled is executed.
- */
-Obj methodTrampoline4(Obj self, Selector cmd, Obj o0, Obj o1, Obj o2, Obj o3)
+
+template <size_t N>
+CompiledMethod getMethodTrampolineN()
 {
-	Obj args[] = { o0, o1, o2, o3 };
-	Class *cls = isInteger(self) ? &SmallIntClass : self->isa;
-	Method *mth = methodForSelector(cls, cmd);
-	return mth->AST->interpretMethod(*currentContext, mth, self, cmd, args);
+	return getMethodTrampolineNImpl(typename gens<N>::type{});
 }
-/**
- * 5-argument trampoline for jumping back into the interpreter when a method
- * that has not yet been compiled is executed.
- */
-Obj methodTrampoline5(Obj self, Selector cmd, Obj o0, Obj o1, Obj o2, Obj o3,
-		Obj o4)
-{
-	Obj args[] = { o0, o1, o2, o3, o4 };
-	Class *cls = isInteger(self) ? &SmallIntClass : self->isa;
-	Method *mth = methodForSelector(cls, cmd);
-	return mth->AST->interpretMethod(*currentContext, mth, self, cmd, args);
-}
-/**
- * 6-argument trampoline for jumping back into the interpreter when a method
- * that has not yet been compiled is executed.
- */
-Obj methodTrampoline6(Obj self, Selector cmd, Obj o0, Obj o1, Obj o2, Obj o3,
-		Obj o4, Obj o5)
-{
-	Obj args[] = { o0, o1, o2, o3, o4, o5 };
-	Class *cls = isInteger(self) ? &SmallIntClass : self->isa;
-	Method *mth = methodForSelector(cls, cmd);
-	return mth->AST->interpretMethod(*currentContext, mth, self, cmd, args);
-}
-/**
- * 7-argument trampoline for jumping back into the interpreter when a method
- * that has not yet been compiled is executed.
- */
-Obj methodTrampoline7(Obj self, Selector cmd, Obj o0, Obj o1, Obj o2, Obj o3,
-		Obj o4, Obj o5, Obj o6)
-{
-	Obj args[] = { o0, o1, o2, o3, o4, o5, o6 };
-	Class *cls = isInteger(self) ? &SmallIntClass : self->isa;
-	Method *mth = methodForSelector(cls, cmd);
-	return mth->AST->interpretMethod(*currentContext, mth, self, cmd, args);
-}
-/**
- * 8-argument trampoline for jumping back into the interpreter when a method
- * that has not yet been compiled is executed.
- */
-Obj methodTrampoline8(Obj self, Selector cmd, Obj o0, Obj o1, Obj o2, Obj o3, Obj o4,
-		Obj o5, Obj o6, Obj o7)
-{
-	Obj args[] = { o0, o1, o2, o3, o4, o5, o6, o7 };
-	Class *cls = isInteger(self) ? &SmallIntClass : self->isa;
-	Method *mth = methodForSelector(cls, cmd);
-	return mth->AST->interpretMethod(*currentContext, mth, self, cmd, args);
-}
-/**
- * 9-argument trampoline for jumping back into the interpreter when a method
- * that has not yet been compiled is executed.
- */
-Obj methodTrampoline9(Obj self, Selector cmd, Obj o0, Obj o1, Obj o2, Obj o3,
-		Obj o4, Obj o5, Obj o6, Obj o7, Obj o8)
-{
-	Obj args[] = { o0, o1, o2, o3, o4, o5, o6, o7, o8 };
-	Class *cls = isInteger(self) ? &SmallIntClass : self->isa;
-	Method *mth = methodForSelector(cls, cmd);
-	return mth->AST->interpretMethod(*currentContext, mth, self, cmd, args);
-}
-/**
- * 10-argument trampoline for jumping back into the interpreter when a method
- * that has not yet been compiled is executed.
- */
-Obj methodTrampoline10(Obj self, Selector cmd, Obj o0, Obj o1, Obj o2, Obj o3,
-		Obj o4, Obj o5, Obj o6, Obj o7, Obj o8, Obj o9)
-{
-	Obj args[] = { o0, o1, o2, o3, o4, o5, o6, o7, o8, o9 };
-	Class *cls = isInteger(self) ? &SmallIntClass : self->isa;
-	Method *mth = methodForSelector(cls, cmd);
-	return mth->AST->interpretMethod(*currentContext, mth, self, cmd, args);
-}
+
 /**
  * Array of trampolines, indexed by number or arguments.  
  */
 CompiledMethod methodTrampolines[] = {
-	reinterpret_cast<CompiledMethod>(methodTrampoline0),
-	reinterpret_cast<CompiledMethod>(methodTrampoline1),
-	reinterpret_cast<CompiledMethod>(methodTrampoline2),
-	reinterpret_cast<CompiledMethod>(methodTrampoline3),
-	reinterpret_cast<CompiledMethod>(methodTrampoline4),
-	reinterpret_cast<CompiledMethod>(methodTrampoline5),
-	reinterpret_cast<CompiledMethod>(methodTrampoline6),
-	reinterpret_cast<CompiledMethod>(methodTrampoline7),
-	reinterpret_cast<CompiledMethod>(methodTrampoline8),
-	reinterpret_cast<CompiledMethod>(methodTrampoline9),
-	reinterpret_cast<CompiledMethod>(methodTrampoline10)
+	getMethodTrampolineN<0>(),
+	getMethodTrampolineN<1>(),
+	getMethodTrampolineN<2>(),
+	getMethodTrampolineN<3>(),
+	getMethodTrampolineN<4>(),
+	getMethodTrampolineN<5>(),
+	getMethodTrampolineN<6>(),
+	getMethodTrampolineN<7>(),
+	getMethodTrampolineN<8>(),
+	getMethodTrampolineN<9>(),
+	getMethodTrampolineN<10>()
 };
 } // end anonymous namespace
 
@@ -276,18 +122,19 @@ namespace Interpreter
  * Array of trampolines, indexed by number or arguments.  
  */
 ClosureInvoke closureTrampolines[] = {
-	reinterpret_cast<ClosureInvoke>(closureTrampoline0),
-	reinterpret_cast<ClosureInvoke>(closureTrampoline1),
-	reinterpret_cast<ClosureInvoke>(closureTrampoline2),
-	reinterpret_cast<ClosureInvoke>(closureTrampoline3),
-	reinterpret_cast<ClosureInvoke>(closureTrampoline4),
-	reinterpret_cast<ClosureInvoke>(closureTrampoline5),
-	reinterpret_cast<ClosureInvoke>(closureTrampoline6),
-	reinterpret_cast<ClosureInvoke>(closureTrampoline7),
-	reinterpret_cast<ClosureInvoke>(closureTrampoline8),
-	reinterpret_cast<ClosureInvoke>(closureTrampoline9),
-	reinterpret_cast<ClosureInvoke>(closureTrampoline10)
+	getClosureTrampolineN<0>(),
+	getClosureTrampolineN<1>(),
+	getClosureTrampolineN<2>(),
+	getClosureTrampolineN<3>(),
+	getClosureTrampolineN<4>(),
+	getClosureTrampolineN<5>(),
+	getClosureTrampolineN<6>(),
+	getClosureTrampolineN<7>(),
+	getClosureTrampolineN<8>(),
+	getClosureTrampolineN<9>(),
+	getClosureTrampolineN<10>()
 };
+
 void Value::set(Obj o)
 {
 	if (needsGC(object) && !needsGC(o))
