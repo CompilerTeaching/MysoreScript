@@ -80,11 +80,8 @@ int main(int argc, char **argv)
 	bool memstats = false;
 	// What file should we print?
 	const char *file = nullptr;
-	if (argc < 1)
-	{
-		usage(argv[0]);
-		return EXIT_FAILURE;
-	}
+	// Used to determine if MysoreScript has been invoked without a purpose, which should trigger the usage message.
+ 	bool actionTaken = false;
 	int c;
 	pegmatite::ErrorReporter err =
 		[](const pegmatite::InputRange &r, std::string s) {
@@ -98,9 +95,11 @@ int main(int argc, char **argv)
 		{
 			case 'i':
 				repl = true;
+				actionTaken = true;
 				break;
 			case 'f':
 				file = optarg;
+				actionTaken = true;
 				break;
 			case 't':
 				enableTiming = true;
@@ -110,11 +109,16 @@ int main(int argc, char **argv)
 				break;
 			case 'h':
 				usage(argv[0]);
+				actionTaken = true;
 				break;
 			case 'c':
 				Interpreter::forceCompiler = true;
 				break;
 		}
+	}
+	if (!actionTaken) {
+		usage(argv[0]);
+		return EXIT_FAILURE;
 	}
 	c1 = clock();
 	//Initialise the garbage collection library.  This must be called before
