@@ -742,6 +742,33 @@ namespace AST
 		}
 	};
 	/**
+	 * Else statement.
+	 */
+	struct ElseStatement : Statement
+	{
+		/**
+		 * The body of the else statement.
+		 */
+		ASTPtr<Statements> body;
+		/**
+		 * Interpret the body if the corresponding if statement's condition is
+		 * false.
+		 */
+		void interpret(Interpreter::Context &c) override;
+		/**
+		 * Compile the else statement.
+		 */
+		virtual void compile(Compiler::Context &c) override;
+		/**
+		 * Collect all of the variables used and defined in this statement.
+		 */
+		void collectVarUses(std::unordered_set<std::string> &decls,
+							std::unordered_set<std::string> &uses) override
+		{
+			body->collectVarUses(decls, uses);
+		}
+	};
+	/**
 	 * If statement.
 	 */
 	struct IfStatement : Statement
@@ -755,6 +782,10 @@ namespace AST
 		 * The body of the if statement.
 		 */
 		ASTPtr<Statements> body;
+		/**
+		 * The corresponding else statement.
+		 */
+		ASTPtr<ElseStatement, true/*optional*/> elseStatement;
 		/**
 		 * Interpret the condition, then interpret the body if the condition is
 		 * true.

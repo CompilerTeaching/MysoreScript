@@ -187,11 +187,15 @@ struct MysoreScriptGrammar
 	 */
 	Rule ret          = "return"_E >> expression >> ';';
 	/**
+	 * An else statement, that optionally follows an if statement.
+	 */
+	Rule elseStatement = "else"_E >> '{' >> statements >> '}';
+	/**
 	 * An if statement, with a condition in brackets followed by the body in
 	 * braces.
 	 */
 	Rule ifStatement  = "if"_E >> '(' >> expression >> ')' >>
-	                    '{' >> statements >> '}';
+	                    '{' >> statements >> '}' >> -(elseStatement);
 	/**
 	 * A while loop, with the condition in brackets followed by the body in
 	 * braces.
